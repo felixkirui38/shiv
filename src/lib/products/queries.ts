@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { withDbRetry } from "@/lib/db-retry";
 import {
   productDetailInclude,
   productListInclude,
@@ -8,11 +9,13 @@ import {
 
 export async function getActiveProducts() {
   try {
-    const products = await prisma.insuranceProduct.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-      include: productListInclude,
-    });
+    const products = await withDbRetry(() =>
+      prisma.insuranceProduct.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: "asc" },
+        include: productListInclude,
+      })
+    );
     return products.map(serializeProductListItem);
   } catch {
     return [];

@@ -10,12 +10,22 @@ import {
 import { Logo } from "@/components/brand/logo";
 import { SocialIcon } from "@/components/brand/social-icons";
 import { NewsletterForm } from "@/components/layout/newsletter-form";
+import { FooterCurrencySelector } from "@/components/layout/footer-currency-selector";
 import { Separator } from "@/components/ui/separator";
 import { useSiteNavigation } from "@/components/providers/navigation-provider";
+import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { FooterLicenseTrigger } from "@/components/layout/footer-license-trigger";
 import { brand } from "@/lib/brand";
 
 export function SiteFooter() {
+  return (
+    <CurrencyProvider>
+      <SiteFooterContent />
+    </CurrencyProvider>
+  );
+}
+
+function SiteFooterContent() {
   const { footer } = useSiteNavigation();
 
   return (
@@ -99,6 +109,10 @@ export function SiteFooter() {
         </div>
 
         <Separator className="my-8 bg-white/15 md:my-10" />
+
+        <div className="mb-4 flex justify-center md:justify-end">
+          <FooterCurrencySelector />
+        </div>
 
         {/* Copyright */}
         <div className="flex flex-col items-center justify-between gap-3 text-center text-sm text-white/60 md:flex-row md:text-left">

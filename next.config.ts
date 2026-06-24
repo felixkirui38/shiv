@@ -53,6 +53,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/quote", destination: "/products", permanent: false },
       { source: "/quote/:path*", destination: "/products", permanent: false },
+      { source: "/insurance", destination: "/products", permanent: false },
+      { source: "/insurance/:path*", destination: "/products", permanent: false },
       {
         source: "/products/:slug/quote",
         destination: "/products/:slug/buy",

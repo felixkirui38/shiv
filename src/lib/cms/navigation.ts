@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { defaultSiteNavigation } from "@/config/navigation.defaults";
+import { defaultSiteNavigation, defaultProductNavLinks } from "@/config/navigation.defaults";
 import { getPublishedWebsiteConfig } from "@/lib/cms/website-builder";
 import type { SiteNavigationConfig } from "@/types/navigation";
 import { getActiveProducts } from "@/lib/products/queries";
@@ -10,17 +10,25 @@ function mergeProductsIntoNav(
   config: SiteNavigationConfig,
   products: Awaited<ReturnType<typeof getActiveProducts>>
 ): SiteNavigationConfig {
-  if (!products.length) return config;
+  const productLinks =
+    products.length > 0
+      ? products.map((p) => ({
+          label: p.name,
+          href: `/products/${p.slug}`,
+          description: p.shortDescription ?? undefined,
+          icon: p.icon ?? "shield",
+        }))
+      : defaultProductNavLinks;
 
-  const productLinks = products.map((p) => ({
-    label: p.name,
-    href: `/products/${p.slug}`,
-    description: p.shortDescription ?? undefined,
-    icon: p.icon ?? "shield",
+  const footerProductLinks = productLinks.map(({ label, href }) => ({
+    label,
+    href,
   }));
 
   const columns = config.footer.columns.map((col) =>
-    col.title === "Insurance Products" ? { ...col, links: productLinks } : col
+    col.title === "Insurance Products"
+      ? { ...col, links: footerProductLinks }
+      : col
   );
 
   return {
