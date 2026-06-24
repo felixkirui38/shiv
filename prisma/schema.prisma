@@ -1,0 +1,1631 @@
+// Shiv Insurance Platform — Prisma Schema
+// PostgreSQL · NextAuth · Stripe · CMS · Dynamic Forms
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+enum UserRole {
+  CUSTOMER
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  FINANCE
+  CLAIMS_OFFICER
+  MARKETING
+  AGENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum ProductType {
+  MOTOR
+  MEDICAL
+  TRAVEL
+  LIFE
+  HOME
+  BUSINESS
+  MARINE
+  PET
+}
+
+enum PolicyStatus {
+  DRAFT
+  PENDING_PAYMENT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  LAPSED
+  RENEWED
+}
+
+enum ClaimStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  INVESTIGATION
+  DOCUMENTS_REQUESTED
+  APPROVED
+  PARTIALLY_APPROVED
+  REJECTED
+  PAID
+  CLOSED
+}
+
+enum ClaimDocumentCategory {
+  POLICE_ABSTRACT
+  PHOTO
+  VIDEO
+  MEDICAL_REPORT
+  OTHER
+}
+
+enum ClaimCommunicationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  IN_APP
+}
+
+enum QuoteStatus {
+  DRAFT
+  PENDING
+  SENT
+  ACCEPTED
+  EXPIRED
+  CONVERTED
+}
+
+enum InsuranceApplicationStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  PENDING_PAYMENT
+  PAID
+  POLICY_ISSUED
+  EXPIRED
+  CANCELLED
+}
+
+enum OrderStatus {
+  DRAFT
+  SUBMITTED
+  PENDING_PAYMENT
+  PAID
+  POLICY_GENERATED
+  EXPIRED
+  CANCELLED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CANCELLED
+}
+
+enum PaymentProvider {
+  STRIPE
+  PESAPAL
+  FLUTTERWAVE
+  MPESA
+}
+
+enum PaymentPlanType {
+  ONE_TIME
+  SUBSCRIPTION
+  INSTALLMENT
+  ANNUAL
+}
+
+enum PaymentType {
+  ONE_TIME
+  SUBSCRIPTION
+  RENEWAL
+  INSTALLMENT
+  CLAIM_PAYOUT
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+  VOID
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIALING
+  INCOMPLETE
+  PAUSED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  LOST
+}
+
+enum FormFieldType {
+  TEXT
+  TEXTAREA
+  EMAIL
+  PHONE
+  NUMBER
+  DATE
+  SELECT
+  MULTI_SELECT
+  RADIO
+  CHECKBOX
+  FILE
+  BOOLEAN
+  ADDRESS
+  CURRENCY
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  PDF
+  OTHER
+}
+
+enum WebsiteSectionType {
+  HERO
+  SERVICES
+  CALCULATOR
+  HOW_IT_WORKS
+  CLAIMS_PROCESS
+  TESTIMONIALS
+  STATISTICS
+  PARTNERS
+  FAQ
+  BLOG_PREVIEW
+  CTA
+  CUSTOM
+}
+
+enum NotificationType {
+  EMAIL
+  IN_APP
+  SMS
+}
+
+enum NotificationEvent {
+  QUOTE_CREATED
+  POLICY_APPROVED
+  PAYMENT_RECEIVED
+  RENEWAL_REMINDER
+  CLAIM_SUBMITTED
+  CLAIM_APPROVED
+  PASSWORD_RESET
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  IN_APP
+}
+
+enum NotificationDeliveryStatus {
+  QUEUED
+  PROCESSING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum BlogPostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BlogCommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+}
+
+enum FormulaVersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CalculationSource {
+  PREVIEW
+  PUBLIC
+  API
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUTH & USERS (NextAuth + custom roles)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  firstName     String?
+  lastName      String?
+  phone         String?
+  avatarUrl     String?
+  role          UserRole   @default(CUSTOMER)
+  status        UserStatus @default(PENDING_VERIFICATION)
+  dateOfBirth   DateTime?
+  address       Json?
+  stripeCustomerId String? @unique
+  lastLoginAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  policies      Policy[]
+  claims        Claim[]
+  quotes        Quote[]
+  insuranceApplications InsuranceApplication[]
+  orders        Order[]
+  payments      Payment[]
+  invoices      Invoice[]
+  subscriptions Subscription[]
+  formDrafts    FormDraft[]
+  formSubmissions FormSubmission[]
+  notifications Notification[]
+  auditLogs     AuditLog[]
+  assignedClaims Claim[] @relation("AssignedClaims")
+  reviewedClaims Claim[] @relation("ReviewedClaims")
+  claimNotes     ClaimNote[]
+  claimMessages  ClaimCommunication[] @relation("ClaimCommunications")
+  leads         Lead[]   @relation("AssignedLeads")
+  formulasCreated   PremiumFormulaVersion[] @relation("FormulaCreatedBy")
+  formulasPublished PremiumFormulaVersion[] @relation("FormulaPublishedBy")
+  premiumCalculations PremiumCalculationLog[]
+  blogPosts         BlogPost[]       @relation("BlogAuthor")
+  websiteVersions   WebsiteVersion[]
+  aiConversations   AiAdvisorConversation[]
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  module      String
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  role         UserRole
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@map("role_permissions")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INSURANCE PRODUCTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model InsuranceProduct {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  name             String
+  category         String?
+  shortDescription String?  @db.Text
+  longDescription  String?  @db.Text
+  icon             String?
+  bannerImageId    String?
+  heroImageId      String?
+  ogImageId        String?
+  basePremium      Decimal  @default(0) @db.Decimal(12, 2)
+  pricingFormula   Json?
+  claimProcedure   String?  @db.Text
+  terms            String?  @db.Text
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  metaTitle        String?
+  metaDescription  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  bannerImage       Media?                  @relation("ProductBanner", fields: [bannerImageId], references: [id])
+  heroImage         Media?                  @relation("ProductHero", fields: [heroImageId], references: [id])
+  ogImage           Media?                  @relation("ProductOg", fields: [ogImageId], references: [id])
+  features          ProductFeature[]
+  benefits          ProductBenefit[]
+  coverages         ProductCoverage[]
+  exclusions        ProductExclusion[]
+  eligibilityItems  ProductEligibility[]
+  requiredDocuments ProductRequiredDocument[]
+  faqs              ProductFaq[]
+  policies          Policy[]
+  quotes            Quote[]
+  insuranceApplications InsuranceApplication[]
+  formDefinitions   FormDefinition[]
+  premiumRules      PremiumRule[]
+  premiumCalculator PremiumCalculatorConfig?
+  premiumCalculationLogs PremiumCalculationLog[]
+
+  @@index([slug])
+  @@index([category])
+  @@index([isActive])
+  @@map("insurance_products")
+}
+
+model ProductFeature {
+  id          String @id @default(cuid())
+  productId   String
+  title       String
+  description String? @db.Text
+  icon        String?
+  sortOrder   Int    @default(0)
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_features")
+}
+
+model ProductBenefit {
+  id          String @id @default(cuid())
+  productId   String
+  title       String
+  description String? @db.Text
+  sortOrder   Int    @default(0)
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_benefits")
+}
+
+model ProductCoverage {
+  id          String  @id @default(cuid())
+  productId   String
+  name        String
+  description String? @db.Text
+  limit       Decimal? @db.Decimal(12, 2)
+  deductible  Decimal? @db.Decimal(12, 2)
+  isIncluded  Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_coverages")
+}
+
+model PremiumRule {
+  id          String  @id @default(cuid())
+  productId   String
+  name        String
+  fieldKey    String
+  operator    String
+  value       Json
+  multiplier  Decimal @default(1) @db.Decimal(8, 4)
+  fixedAmount Decimal @default(0) @db.Decimal(12, 2)
+  isActive    Boolean @default(true)
+  priority    Int     @default(0)
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("premium_rules")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DYNAMIC PREMIUM CALCULATOR (versioned formulas, CMS-managed)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model PremiumCalculatorConfig {
+  id              String   @id @default(cuid())
+  productId       String   @unique
+  category        String
+  activeVersionId String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product       InsuranceProduct         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  activeVersion PremiumFormulaVersion?   @relation("ActiveFormulaVersion", fields: [activeVersionId], references: [id], onDelete: SetNull)
+  versions      PremiumFormulaVersion[]  @relation("ConfigVersions")
+
+  @@index([category])
+  @@map("premium_calculator_configs")
+}
+
+model PremiumFormulaVersion {
+  id            String               @id @default(cuid())
+  configId      String
+  version       Int
+  status        FormulaVersionStatus @default(DRAFT)
+  name          String?
+  changelog     String?              @db.Text
+  basePremium   Decimal              @default(0) @db.Decimal(12, 2)
+  formula       Json
+  fields        Json
+  createdById   String?
+  publishedById String?
+  publishedAt   DateTime?
+  createdAt     DateTime             @default(now())
+
+  config          PremiumCalculatorConfig  @relation("ConfigVersions", fields: [configId], references: [id], onDelete: Cascade)
+  activeForConfig PremiumCalculatorConfig? @relation("ActiveFormulaVersion")
+  createdBy       User?                    @relation("FormulaCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  publishedBy     User?                    @relation("FormulaPublishedBy", fields: [publishedById], references: [id], onDelete: SetNull)
+  calculations    PremiumCalculationLog[]
+
+  @@unique([configId, version])
+  @@index([status])
+  @@map("premium_formula_versions")
+}
+
+model PremiumCalculationLog {
+  id               String            @id @default(cuid())
+  productId        String
+  formulaVersionId String
+  source           CalculationSource
+  input            Json
+  output           Json
+  userId           String?
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime          @default(now())
+
+  product        InsuranceProduct      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  formulaVersion PremiumFormulaVersion @relation(fields: [formulaVersionId], references: [id], onDelete: Cascade)
+  user           User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([formulaVersionId])
+  @@index([source])
+  @@index([createdAt])
+  @@map("premium_calculation_logs")
+}
+
+model ProductExclusion {
+  id          String  @id @default(cuid())
+  productId   String
+  title       String
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_exclusions")
+}
+
+model ProductEligibility {
+  id          String  @id @default(cuid())
+  productId   String
+  title       String
+  description String? @db.Text
+  sortOrder   Int     @default(0)
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_eligibility")
+}
+
+model ProductRequiredDocument {
+  id          String  @id @default(cuid())
+  productId   String
+  name        String
+  description String? @db.Text
+  isRequired  Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_required_documents")
+}
+
+model ProductFaq {
+  id        String @id @default(cuid())
+  productId String
+  question  String
+  answer    String @db.Text
+  sortOrder Int    @default(0)
+
+  product InsuranceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_faqs")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// POLICIES & QUOTES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Policy {
+  id              String       @id @default(cuid())
+  policyNumber    String       @unique
+  userId          String
+  productId       String
+  quoteId         String?      @unique
+  applicationId   String?      @unique
+  orderId         String?      @unique
+  status          PolicyStatus @default(DRAFT)
+  premium         Decimal      @db.Decimal(12, 2)
+  coverageAmount  Decimal?     @db.Decimal(12, 2)
+  deductible      Decimal?     @db.Decimal(12, 2)
+  startDate       DateTime?
+  endDate         DateTime?
+  renewalDate     DateTime?
+  autoRenew       Boolean      @default(false)
+  formData        Json?
+  metadata        Json?
+  stripeSubscriptionId String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id])
+  product         InsuranceProduct  @relation(fields: [productId], references: [id])
+  quote           Quote?            @relation(fields: [quoteId], references: [id])
+  application     InsuranceApplication? @relation(fields: [applicationId], references: [id])
+  order           Order?            @relation(fields: [orderId], references: [id])
+  documents       PolicyDocument[]
+  claims          Claim[]
+  payments        Payment[]
+  invoices        Invoice[]
+  renewals        PolicyRenewal[]
+
+  @@index([userId])
+  @@index([productId])
+  @@index([status])
+  @@index([policyNumber])
+  @@map("policies")
+}
+
+model PolicyDocument {
+  id         String   @id @default(cuid())
+  policyId   String
+  mediaId    String
+  name       String
+  type       String
+  createdAt  DateTime @default(now())
+
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  media  Media  @relation(fields: [mediaId], references: [id])
+
+  @@map("policy_documents")
+}
+
+model PolicyRenewal {
+  id           String   @id @default(cuid())
+  policyId     String
+  previousEnd  DateTime
+  newStart     DateTime
+  newEnd       DateTime
+  premium      Decimal  @db.Decimal(12, 2)
+  paymentId    String?
+  renewedAt    DateTime @default(now())
+
+  policy  Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  payment Payment? @relation(fields: [paymentId], references: [id])
+
+  @@map("policy_renewals")
+}
+
+model Quote {
+  id              String      @id @default(cuid())
+  quoteNumber     String      @unique
+  userId          String?
+  productId       String
+  leadId          String?
+  status          QuoteStatus @default(DRAFT)
+  estimatedPremium Decimal    @db.Decimal(12, 2)
+  coverageAmount  Decimal?    @db.Decimal(12, 2)
+  validUntil      DateTime?
+  formData        Json?
+  calculatorData  Json?
+  wizardData      Json?
+  currentStep     Int         @default(1)
+  resumeToken     String?     @unique
+  sessionId       String?
+  customerEmail   String?
+  pdfUrl          String?
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user      User?             @relation(fields: [userId], references: [id])
+  product   InsuranceProduct  @relation(fields: [productId], references: [id])
+  lead      Lead?             @relation(fields: [leadId], references: [id])
+  policy    Policy?
+  payments  Payment[]
+  documents QuoteDocument[]
+
+  @@index([userId])
+  @@index([productId])
+  @@index([status])
+  @@index([resumeToken])
+  @@index([sessionId])
+  @@map("quotes")
+}
+
+model QuoteDocument {
+  id        String   @id @default(cuid())
+  quoteId   String
+  mediaId   String
+  fileName  String
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId])
+  @@map("quote_documents")
+}
+
+model InsuranceApplication {
+  id                  String                     @id @default(cuid())
+  applicationNumber   String                     @unique
+  userId              String?
+  productId           String
+  formId              String?
+  status              InsuranceApplicationStatus @default(DRAFT)
+  formData            Json                       @default("{}")
+  premiumBreakdown    Json?
+  basicPremium        Decimal?                   @db.Decimal(12, 2)
+  levies              Decimal?                   @db.Decimal(12, 2)
+  taxes               Decimal?                   @db.Decimal(12, 2)
+  stampDuty           Decimal?                   @db.Decimal(12, 2)
+  totalPremium        Decimal                    @default(0) @db.Decimal(12, 2)
+  currentStep         Int                        @default(1)
+  sessionId           String?
+  resumeToken         String?                    @unique
+  reviewNotes         String?                    @db.Text
+  rejectionReason     String?                    @db.Text
+  documents           Json?
+  metadata            Json?
+  submittedAt         DateTime?
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  user     User?             @relation(fields: [userId], references: [id])
+  product  InsuranceProduct  @relation(fields: [productId], references: [id])
+  form     FormDefinition?   @relation(fields: [formId], references: [id])
+  order    Order?
+  policy   Policy?
+  payments Payment[]
+
+  @@index([userId])
+  @@index([productId])
+  @@index([status])
+  @@index([resumeToken])
+  @@index([sessionId])
+  @@map("insurance_applications")
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  userId        String?
+  applicationId String      @unique
+  status        OrderStatus @default(DRAFT)
+  insuranceName String
+  coverageSummary String?   @db.Text
+  subtotal      Decimal     @db.Decimal(12, 2)
+  levies        Decimal     @default(0) @db.Decimal(12, 2)
+  taxes         Decimal     @default(0) @db.Decimal(12, 2)
+  fees          Decimal     @default(0) @db.Decimal(12, 2)
+  stampDuty     Decimal     @default(0) @db.Decimal(12, 2)
+  totalAmount   Decimal     @db.Decimal(12, 2)
+  currency      String      @default("KES")
+  metadata      Json?
+  paidAt        DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user        User?                @relation(fields: [userId], references: [id])
+  application InsuranceApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  policy      Policy?
+  payments    Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+  @@map("orders")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CLAIMS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Claim {
+  id              String      @id @default(cuid())
+  claimNumber     String      @unique
+  policyId        String
+  userId          String
+  assignedToId    String?
+  reviewedById    String?
+  status          ClaimStatus @default(DRAFT)
+  incidentDate    DateTime
+  reportedDate    DateTime    @default(now())
+  description     String      @db.Text
+  claimAmount     Decimal     @db.Decimal(12, 2)
+  approvedAmount  Decimal?    @db.Decimal(12, 2)
+  formData        Json?
+  resolutionNotes String?     @db.Text
+  resolvedAt      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  policy       Policy              @relation(fields: [policyId], references: [id])
+  user         User                @relation(fields: [userId], references: [id])
+  assignedTo   User?               @relation("AssignedClaims", fields: [assignedToId], references: [id])
+  reviewedBy   User?               @relation("ReviewedClaims", fields: [reviewedById], references: [id])
+  documents    ClaimDocument[]
+  statusHistory ClaimStatusHistory[]
+  notes        ClaimNote[]
+  communications ClaimCommunication[]
+  payments     Payment[]
+
+  @@index([policyId])
+  @@index([userId])
+  @@index([status])
+  @@index([assignedToId])
+  @@map("claims")
+}
+
+model ClaimDocument {
+  id        String                @id @default(cuid())
+  claimId   String
+  mediaId   String
+  name      String
+  type      String
+  category  ClaimDocumentCategory @default(OTHER)
+  createdAt DateTime              @default(now())
+
+  claim Claim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id])
+
+  @@index([claimId])
+  @@index([category])
+  @@map("claim_documents")
+}
+
+model ClaimStatusHistory {
+  id        String      @id @default(cuid())
+  claimId   String
+  fromStatus ClaimStatus?
+  toStatus  ClaimStatus
+  changedBy String?
+  notes     String?
+  createdAt DateTime    @default(now())
+
+  claim Claim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@map("claim_status_history")
+}
+
+model ClaimNote {
+  id         String   @id @default(cuid())
+  claimId    String
+  authorId   String
+  content    String   @db.Text
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  claim  Claim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id])
+
+  @@index([claimId])
+  @@map("claim_notes")
+}
+
+model ClaimCommunication {
+  id        String                  @id @default(cuid())
+  claimId   String
+  channel   ClaimCommunicationChannel
+  subject   String?
+  message   String                  @db.Text
+  sentById  String?
+  recipient String?
+  status    String                  @default("sent")
+  createdAt DateTime                @default(now())
+
+  claim  Claim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  sentBy User? @relation("ClaimCommunications", fields: [sentById], references: [id])
+
+  @@index([claimId])
+  @@map("claim_communications")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PAYMENTS & INVOICES (Multi-provider)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Payment {
+  id                    String           @id @default(cuid())
+  userId                String
+  policyId              String?
+  quoteId               String?
+  applicationId         String?
+  orderId               String?
+  claimId               String?
+  invoiceId             String?
+  type                  PaymentType
+  planType              PaymentPlanType  @default(ONE_TIME)
+  provider              PaymentProvider  @default(STRIPE)
+  status                PaymentStatus    @default(PENDING)
+  amount                Decimal          @db.Decimal(12, 2)
+  currency              String           @default("KES")
+  providerReference     String?          @unique
+  providerSessionId     String?
+  providerCheckoutUrl   String?
+  installmentPlanId     String?
+  installmentNumber     Int?
+  installmentTotal      Int?
+  failureReason         String?
+  receiptUrl            String?
+  stripePaymentIntentId String?          @unique
+  stripeCheckoutId      String?          @unique
+  stripeChargeId        String?
+  description           String?
+  metadata              Json?
+  paidAt                DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  user              User                   @relation(fields: [userId], references: [id])
+  policy            Policy?                @relation(fields: [policyId], references: [id])
+  quote             Quote?                 @relation(fields: [quoteId], references: [id])
+  application       InsuranceApplication?  @relation(fields: [applicationId], references: [id])
+  order             Order?                 @relation(fields: [orderId], references: [id])
+  claim             Claim?                 @relation(fields: [claimId], references: [id])
+  invoice           Invoice?               @relation(fields: [invoiceId], references: [id])
+  installmentPlan   PaymentInstallmentPlan? @relation(fields: [installmentPlanId], references: [id])
+  refunds           PaymentRefund[]
+  renewals          PolicyRenewal[]
+  receipt           Receipt?
+  webhookEvents     PaymentWebhookEvent[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([provider])
+  @@index([providerReference])
+  @@index([stripePaymentIntentId])
+  @@map("payments")
+}
+
+model PaymentRefund {
+  id              String          @id @default(cuid())
+  paymentId       String
+  amount          Decimal         @db.Decimal(12, 2)
+  reason          String?
+  provider        PaymentProvider @default(STRIPE)
+  providerRefundId String?        @unique
+  stripeRefundId  String?         @unique
+  processedBy     String?
+  createdAt       DateTime        @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("payment_refunds")
+}
+
+model PaymentInstallmentPlan {
+  id               String   @id @default(cuid())
+  userId           String
+  policyId         String?
+  quoteId          String?
+  totalAmount      Decimal  @db.Decimal(12, 2)
+  installmentCount Int
+  paidInstallments Int      @default(0)
+  frequency        String   @default("monthly")
+  nextDueDate      DateTime?
+  status           String   @default("active")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  payments Payment[]
+
+  @@index([userId])
+  @@index([policyId])
+  @@map("payment_installment_plans")
+}
+
+model PaymentWebhookEvent {
+  id         String          @id @default(cuid())
+  provider   PaymentProvider
+  eventType  String
+  externalId String?
+  paymentId  String?
+  payload    Json
+  processed  Boolean         @default(false)
+  error      String?
+  createdAt  DateTime        @default(now())
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([provider])
+  @@index([paymentId])
+  @@index([createdAt])
+  @@map("payment_webhook_events")
+}
+
+model Receipt {
+  id            String   @id @default(cuid())
+  paymentId     String   @unique
+  receiptNumber String   @unique
+  pdfUrl        String?
+  issuedAt      DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("receipts")
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String
+  policyId             String?
+  provider             PaymentProvider    @default(STRIPE)
+  planType             PaymentPlanType    @default(SUBSCRIPTION)
+  stripeSubscriptionId String?            @unique
+  providerSubscriptionId String?        @unique
+  stripePriceId        String?
+  providerPriceId      String?
+  status               SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  cancelledAt          DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  userId          String
+  policyId        String?
+  status          InvoiceStatus @default(DRAFT)
+  subtotal        Decimal       @db.Decimal(12, 2)
+  tax             Decimal       @default(0) @db.Decimal(12, 2)
+  total           Decimal       @db.Decimal(12, 2)
+  currency        String        @default("KES")
+  dueDate         DateTime?
+  paidAt          DateTime?
+  stripeInvoiceId String?       @unique
+  pdfUrl          String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id])
+  policy   Policy?           @relation(fields: [policyId], references: [id])
+  lineItems InvoiceLineItem[]
+  payments Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model InvoiceLineItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Decimal @db.Decimal(12, 2)
+  total       Decimal @db.Decimal(12, 2)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_line_items")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DYNAMIC FORMS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model FormDefinition {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  description String?
+  productId   String?
+  version     Int     @default(1)
+  isActive    Boolean @default(true)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product     InsuranceProduct? @relation(fields: [productId], references: [id])
+  fields      FormField[]
+  submissions FormSubmission[]
+  drafts      FormDraft[]
+  applications InsuranceApplication[]
+
+  @@map("form_definitions")
+}
+
+model FormField {
+  id               String        @id @default(cuid())
+  formId           String
+  key              String
+  label            String
+  type             FormFieldType
+  placeholder      String?
+  helpText         String?
+  isRequired       Boolean       @default(false)
+  sortOrder        Int           @default(0)
+  options          Json?
+  validation       Json?
+  conditionalLogic Json?
+  defaultValue     String?
+
+  form FormDefinition @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@unique([formId, key])
+  @@map("form_fields")
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formId    String
+  userId    String?
+  data      Json
+  status    String   @default("submitted")
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  form FormDefinition @relation(fields: [formId], references: [id])
+  user User?          @relation(fields: [userId], references: [id])
+
+  @@index([formId])
+  @@index([userId])
+  @@map("form_submissions")
+}
+
+model FormDraft {
+  id        String   @id @default(cuid())
+  formId    String
+  userId    String?
+  sessionId String?
+  data      Json
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  form FormDefinition @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user User?          @relation(fields: [userId], references: [id])
+
+  @@index([formId, userId])
+  @@index([sessionId])
+  @@map("form_drafts")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CMS & WEBSITE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model CmsPage {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  content         String?  @db.Text
+  blocks          Json?
+  metaTitle       String?
+  metaDescription String?
+  isPublished     Boolean  @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([slug])
+  @@map("cms_pages")
+}
+
+model WebsiteSection {
+  id        String             @id @default(cuid())
+  pageSlug  String             @default("home")
+  type      WebsiteSectionType
+  title     String?
+  subtitle  String?
+  content   Json?
+  isActive  Boolean            @default(true)
+  sortOrder Int                @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([pageSlug, type])
+  @@map("website_sections")
+}
+
+model BlogPost {
+  id              String         @id @default(cuid())
+  slug            String         @unique
+  title           String
+  excerpt         String?        @db.Text
+  content         String         @db.Text
+  featuredImageId String?
+  categoryId      String?
+  authorId        String?
+  tags            String[]
+  status          BlogPostStatus @default(DRAFT)
+  isPublished     Boolean        @default(false)
+  isFeatured      Boolean        @default(false)
+  publishedAt     DateTime?
+  scheduledAt     DateTime?
+  metaTitle       String?
+  metaDescription String?
+  metaKeywords    String?
+  viewCount       Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  featuredImage Media?         @relation(fields: [featuredImageId], references: [id])
+  category      BlogCategory?  @relation(fields: [categoryId], references: [id])
+  author        User?          @relation("BlogAuthor", fields: [authorId], references: [id])
+  comments      BlogComment[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([isPublished])
+  @@index([isFeatured])
+  @@index([scheduledAt])
+  @@map("blog_posts")
+}
+
+model BlogCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  color       String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  posts BlogPost[]
+
+  @@map("blog_categories")
+}
+
+model BlogComment {
+  id          String            @id @default(cuid())
+  postId      String
+  authorName  String
+  authorEmail String
+  content     String            @db.Text
+  status      BlogCommentStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([status])
+  @@map("blog_comments")
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  role      String?
+  company   String?
+  content   String   @db.Text
+  rating    Int      @default(5)
+  avatarId  String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  avatar Media? @relation(fields: [avatarId], references: [id])
+
+  @@map("testimonials")
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String   @db.Text
+  category  String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("faqs")
+}
+
+model Partner {
+  id        String   @id @default(cuid())
+  name      String
+  logoId    String?
+  website   String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+
+  logo Media? @relation(fields: [logoId], references: [id])
+
+  @@map("partners")
+}
+
+model Statistic {
+  id        String @id @default(cuid())
+  label     String
+  value     String
+  suffix    String?
+  icon      String?
+  sortOrder Int    @default(0)
+  isActive  Boolean @default(true)
+
+  @@map("statistics")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MEDIA (Cloudinary)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model MediaFolder {
+  id       String @id @default(cuid())
+  name     String
+  parentId String?
+
+  parent   MediaFolder?  @relation("FolderTree", fields: [parentId], references: [id])
+  children MediaFolder[] @relation("FolderTree")
+  media    Media[]
+
+  @@map("media_folders")
+}
+
+model Media {
+  id           String    @id @default(cuid())
+  folderId     String?
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  type         MediaType
+  url          String
+  publicId     String?
+  width        Int?
+  height       Int?
+  alt          String?
+  uploadedBy   String?
+  createdAt    DateTime  @default(now())
+
+  folder           MediaFolder?       @relation(fields: [folderId], references: [id])
+  productBanners   InsuranceProduct[] @relation("ProductBanner")
+  productHeroes    InsuranceProduct[] @relation("ProductHero")
+  productOgImages  InsuranceProduct[] @relation("ProductOg")
+  blogPosts        BlogPost[]
+  testimonials     Testimonial[]
+  partners         Partner[]
+  policyDocuments  PolicyDocument[]
+  claimDocuments   ClaimDocument[]
+  quoteDocuments   QuoteDocument[]
+
+  @@index([type])
+  @@map("media")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEADS & CONTACT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+model Lead {
+  id           String     @id @default(cuid())
+  firstName    String
+  lastName     String?
+  email        String
+  phone        String?
+  productType  ProductType?
+  source       String?
+  status       LeadStatus @default(NEW)
+  notes        String?    @db.Text
+  assignedToId String?
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  assignedTo User?   @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  quotes     Quote[]
+
+  @@index([email])
+  @@index([status])
+  @@map("leads")
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  repliedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@map("contact_submissions")
+}
+
+model CareerApplication {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  position    String
+  resumeId    String?
+  coverLetter String?  @db.Text
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+
+  @@map("career_applications")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SYSTEM & SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+enum WebsiteVersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model WebsiteVersion {
+  id                String               @id @default(cuid())
+  versionNumber     Int
+  status            WebsiteVersionStatus @default(DRAFT)
+  label             String?
+  homepage          Json
+  navigation        Json
+  sectionOrder      Json
+  sectionVisibility Json
+  createdById       String?
+  publishedAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([versionNumber])
+  @@map("website_versions")
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  group     String   @default("general")
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+model AiAdvisorConversation {
+  id        String   @id @default(cuid())
+  userId    String?
+  sessionId String
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages AiAdvisorMessage[]
+
+  @@index([userId])
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("ai_advisor_conversations")
+}
+
+model AiAdvisorMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  content        String   @db.Text
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  conversation AiAdvisorConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("ai_advisor_messages")
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  subject   String
+  body      String   @db.Text
+  variables Json?
+  isActive  Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+model NotificationTemplate {
+  id        String              @id @default(cuid())
+  event     NotificationEvent
+  channel   NotificationChannel
+  name      String
+  subject   String?
+  body      String              @db.Text
+  variables Json?
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([event, channel])
+  @@map("notification_templates")
+}
+
+model NotificationQueue {
+  id          String                     @id @default(cuid())
+  event       NotificationEvent
+  channel     NotificationChannel
+  status      NotificationDeliveryStatus @default(QUEUED)
+  recipient   String
+  userId      String?
+  subject     String?
+  body        String                     @db.Text
+  payload     Json?
+  attempts    Int                        @default(0)
+  maxAttempts Int                        @default(3)
+  scheduledAt DateTime                   @default(now())
+  processedAt DateTime?
+  lastError   String?
+  createdAt   DateTime                   @default(now())
+
+  logs NotificationLog[]
+
+  @@index([status, scheduledAt])
+  @@index([event])
+  @@map("notification_queue")
+}
+
+model NotificationLog {
+  id        String                     @id @default(cuid())
+  queueId   String?
+  event     NotificationEvent
+  channel   NotificationChannel
+  status    NotificationDeliveryStatus
+  recipient String?
+  userId    String?
+  subject   String?
+  body      String?                    @db.Text
+  metadata  Json?
+  error     String?
+  createdAt DateTime                   @default(now())
+
+  queue NotificationQueue? @relation(fields: [queueId], references: [id], onDelete: SetNull)
+
+  @@index([event])
+  @@index([status])
+  @@index([createdAt])
+  @@map("notification_logs")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType @default(IN_APP)
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entity     String
+  entityId   String?
+  oldData    Json?
+  newData    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+  @@index([userId])
+  @@map("audit_logs")
+}

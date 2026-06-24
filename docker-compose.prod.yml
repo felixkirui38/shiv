@@ -1,0 +1,25 @@
+# Production overlay — use with external managed PostgreSQL / Redis
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d app
+
+services:
+  postgres:
+    profiles:
+      - local-db
+
+  redis:
+    profiles:
+      - local-redis
+
+  app:
+    profiles:
+      - full
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
