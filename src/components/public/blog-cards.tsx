@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Calendar } from "lucide-react";
+import { defaultBlogPosts } from "@/config/blog.defaults";
 import { AnimatedSection } from "@/components/shared/animated-section";
 import {
   Card,
@@ -9,33 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-const posts = [
-  {
-    slug: "understanding-motor-insurance",
-    title: "Understanding Motor Insurance in Kenya",
-    excerpt:
-      "A comprehensive guide to third-party and comprehensive motor cover, including IRDA requirements.",
-    category: "Motor",
-    date: "Mar 15, 2026",
-  },
-  {
-    slug: "medical-scheme-benefits",
-    title: "Choosing the Right Medical Scheme for Your Business",
-    excerpt:
-      "Key factors to consider when selecting group medical insurance for your employees.",
-    category: "Medical",
-    date: "Mar 8, 2026",
-  },
-  {
-    slug: "claims-tips",
-    title: "5 Tips for a Smooth Insurance Claims Experience",
-    excerpt:
-      "How to prepare documentation and communicate effectively during the claims process.",
-    category: "Claims",
-    date: "Feb 28, 2026",
-  },
-];
 
 export function BlogCards() {
   return (
@@ -61,7 +35,7 @@ export function BlogCards() {
         </AnimatedSection>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {posts.map((post, i) => (
+          {defaultBlogPosts.map((post, i) => (
             <AnimatedSection key={post.slug} delay={i * 0.08}>
               <Link href={`/blog/${post.slug}`}>
                 <Card className="h-full border-brand bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
@@ -76,7 +50,11 @@ export function BlogCards() {
                       </Badge>
                       <span className="flex items-center gap-1 text-xs text-body">
                         <Calendar className="size-3" />
-                        {post.date}
+                        {new Date(post.date).toLocaleDateString("en-KE", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
                       </span>
                     </div>
                     <CardTitle className="font-heading text-base font-semibold leading-snug">

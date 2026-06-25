@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { withDbRetry } from "@/lib/db-retry";
 import {
+  getFallbackActiveProducts,
+  getFallbackProductBySlug,
+  getFallbackProductSlugs,
+} from "@/lib/products/fallback";
+import {
   productDetailInclude,
   productListInclude,
   serializeProduct,
@@ -16,9 +21,10 @@ export async function getActiveProducts() {
         include: productListInclude,
       })
     );
+    if (products.length === 0) return getFallbackActiveProducts();
     return products.map(serializeProductListItem);
   } catch {
-    return [];
+    return getFallbackActiveProducts();
   }
 }
 
@@ -36,14 +42,19 @@ export async function getAllProducts() {
 
 export async function getProductBySlug(slug: string) {
   try {
-    const product = await prisma.insuranceProduct.findUnique({
-      where: { slug, isActive: true },
-      include: productDetailInclude,
-    });
-    return product ? serializeProduct(product) : null;
+    const product = await withDbRetry(() =>
+      prisma.insuranceProduct.findUnique({
+        where: { slug, isActive: true },
+        include: productDetailInclude,
+      })
+    );
+    if (product) return serializeProduct(product);
   } catch {
-    return null;
+    // use static fallback below
   }
+
+  const fallback = getFallbackProductBySlug(slug);
+  return fallback ? serializeProduct(fallback) : null;
 }
 
 export async function getProductBySlugAdmin(slug: string) {
@@ -60,12 +71,15 @@ export async function getProductBySlugAdmin(slug: string) {
 
 export async function getProductSlugs() {
   try {
-    const products = await prisma.insuranceProduct.findMany({
-      where: { isActive: true },
-      select: { slug: true },
-    });
+    const products = await withDbRetry(() =>
+      prisma.insuranceProduct.findMany({
+        where: { isActive: true },
+        select: { slug: true },
+      })
+    );
+    if (products.length === 0) return getFallbackProductSlugs();
     return products.map((p) => p.slug);
   } catch {
-    return [];
+    return getFallbackProductSlugs();
   }
 }

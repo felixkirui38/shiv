@@ -1,4 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { withDbRetry } from "@/lib/db-retry";
+import {
+  getFallbackFeaturedPosts,
+  getFallbackPostBySlug,
+  listFallbackPublishedPosts,
+} from "@/lib/blog/fallback";
 import type { BlogPostStatus } from "@/generated/prisma/client";
 
 const postInclude = {
@@ -9,18 +15,22 @@ const postInclude = {
 };
 
 export async function publishDueScheduledPosts() {
-  const now = new Date();
-  await prisma.blogPost.updateMany({
-    where: {
-      status: "SCHEDULED",
-      scheduledAt: { lte: now },
-    },
-    data: {
-      status: "PUBLISHED",
-      isPublished: true,
-      publishedAt: now,
-    },
-  });
+  try {
+    const now = new Date();
+    await prisma.blogPost.updateMany({
+      where: {
+        status: "SCHEDULED",
+        scheduledAt: { lte: now },
+      },
+      data: {
+        status: "PUBLISHED",
+        isPublished: true,
+        publishedAt: now,
+      },
+    });
+  } catch {
+    // database unavailable — skip scheduled publish sweep
+  }
 }
 
 function isPubliclyVisible(status: BlogPostStatus, scheduledAt: Date | null) {
@@ -116,92 +126,120 @@ export async function listPublishedPosts(filters?: {
     ],
   };
 
-  const [items, total] = await Promise.all([
-    prisma.blogPost.findMany({
-      where,
-      orderBy: { publishedAt: "desc" },
-      skip,
-      take: limit,
-      include: postInclude,
-    }),
-    prisma.blogPost.count({ where }),
-  ]);
+  try {
+    const [items, total] = await withDbRetry(() =>
+      Promise.all([
+        prisma.blogPost.findMany({
+          where,
+          orderBy: { publishedAt: "desc" },
+          skip,
+          take: limit,
+          include: postInclude,
+        }),
+        prisma.blogPost.count({ where }),
+      ])
+    );
 
-  return {
-    items: items.map(serializePostList),
-    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
-  };
+    if (items.length > 0) {
+      return {
+        items: items.map(serializePostList),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
+    }
+  } catch {
+    // fall through to static posts
+  }
+
+  return listFallbackPublishedPosts(filters);
 }
 
 export async function getFeaturedPosts(limit = 3) {
   await publishDueScheduledPosts();
 
-  const featured = await prisma.blogPost.findMany({
-    where: {
-      isFeatured: true,
-      OR: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", scheduledAt: { lte: new Date() } },
-      ],
-    },
-    orderBy: { publishedAt: "desc" },
-    take: limit,
-    include: postInclude,
-  });
+  try {
+    const featured = await withDbRetry(() =>
+      prisma.blogPost.findMany({
+        where: {
+          isFeatured: true,
+          OR: [
+            { status: "PUBLISHED" },
+            { status: "SCHEDULED", scheduledAt: { lte: new Date() } },
+          ],
+        },
+        orderBy: { publishedAt: "desc" },
+        take: limit,
+        include: postInclude,
+      })
+    );
 
-  if (featured.length >= limit) return featured.map(serializePostList);
+    if (featured.length >= limit) return featured.map(serializePostList);
 
-  const rest = await prisma.blogPost.findMany({
-    where: {
-      isFeatured: false,
-      OR: [
-        { status: "PUBLISHED" },
-        { status: "SCHEDULED", scheduledAt: { lte: new Date() } },
-      ],
-    },
-    orderBy: { publishedAt: "desc" },
-    take: limit - featured.length,
-    include: postInclude,
-  });
+    const rest = await prisma.blogPost.findMany({
+      where: {
+        isFeatured: false,
+        OR: [
+          { status: "PUBLISHED" },
+          { status: "SCHEDULED", scheduledAt: { lte: new Date() } },
+        ],
+      },
+      orderBy: { publishedAt: "desc" },
+      take: limit - featured.length,
+      include: postInclude,
+    });
 
-  return [...featured, ...rest].map(serializePostList);
+    const combined = [...featured, ...rest];
+    if (combined.length > 0) return combined.map(serializePostList);
+  } catch {
+    // fall through
+  }
+
+  return getFallbackFeaturedPosts(limit);
 }
 
 export async function getPostBySlug(slug: string, incrementViews = false) {
   await publishDueScheduledPosts();
 
-  const post = await prisma.blogPost.findUnique({
-    where: { slug },
-    include: {
-      ...postInclude,
-      comments: {
-        where: { status: "APPROVED" },
-        orderBy: { createdAt: "desc" },
-      },
-    },
-  });
+  try {
+    const post = await withDbRetry(() =>
+      prisma.blogPost.findUnique({
+        where: { slug },
+        include: {
+          ...postInclude,
+          comments: {
+            where: { status: "APPROVED" },
+            orderBy: { createdAt: "desc" },
+          },
+        },
+      })
+    );
 
-  if (!post) return null;
-  if (!isPubliclyVisible(post.status, post.scheduledAt)) return null;
+    if (post && isPubliclyVisible(post.status, post.scheduledAt)) {
+      if (incrementViews) {
+        await prisma.blogPost
+          .update({
+            where: { id: post.id },
+            data: { viewCount: { increment: 1 } },
+          })
+          .catch(() => undefined);
+      }
 
-  if (incrementViews) {
-    await prisma.blogPost.update({
-      where: { id: post.id },
-      data: { viewCount: { increment: 1 } },
-    });
+      return {
+        ...serializePostList(post),
+        content: post.content,
+        metaKeywords: post.metaKeywords,
+        comments: post.comments.map((c) => ({
+          id: c.id,
+          authorName: c.authorName,
+          content: c.content,
+          createdAt: c.createdAt.toISOString(),
+        })),
+      };
+    }
+  } catch {
+    // fall through to static post
   }
 
-  return {
-    ...serializePostList(post),
-    content: post.content,
-    metaKeywords: post.metaKeywords,
-    comments: post.comments.map((c) => ({
-      id: c.id,
-      authorName: c.authorName,
-      content: c.content,
-      createdAt: c.createdAt.toISOString(),
-    })),
-  };
+  return getFallbackPostBySlug(slug);
 }
 
 export async function listAdminPosts(filters?: {

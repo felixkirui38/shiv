@@ -9,6 +9,8 @@ const globalForPrisma = globalThis as unknown as {
   pgPool: Pool | undefined;
 };
 
+let resetPromise: Promise<PrismaClient> | null = null;
+
 function createPool(): Pool {
   const pool = new Pool({
     connectionString: resolvePgConnectionString(),
@@ -25,9 +27,6 @@ function createPool(): Pool {
 }
 
 function createPrismaClient(): PrismaClient {
-  if (globalForPrisma.pgPool) {
-    globalForPrisma.pgPool.end().catch(() => undefined);
-  }
   globalForPrisma.pgPool = createPool();
   const adapter = new PrismaPg(globalForPrisma.pgPool);
   return new PrismaClient({
@@ -44,41 +43,86 @@ export function getPrisma(): PrismaClient {
 }
 
 export async function resetPrisma(): Promise<PrismaClient> {
-  if (globalForPrisma.prisma) {
-    await globalForPrisma.prisma.$disconnect().catch(() => undefined);
+  if (resetPromise) return resetPromise;
+
+  resetPromise = (async () => {
+    const oldClient = globalForPrisma.prisma;
+    const oldPool = globalForPrisma.pgPool;
+
     globalForPrisma.prisma = undefined;
-  }
-  if (globalForPrisma.pgPool) {
-    await globalForPrisma.pgPool.end().catch(() => undefined);
     globalForPrisma.pgPool = undefined;
-  }
-  globalForPrisma.prisma = createPrismaClient();
-  return globalForPrisma.prisma;
+
+    if (oldClient) {
+      await oldClient.$disconnect().catch(() => undefined);
+    }
+    if (oldPool) {
+      await oldPool.end().catch(() => undefined);
+    }
+
+    const client = createPrismaClient();
+    globalForPrisma.prisma = client;
+    return client;
+  })().finally(() => {
+    resetPromise = null;
+  });
+
+  return resetPromise;
 }
 
-function wrapClientWithRetry<T extends object>(target: T): T {
-  return new Proxy(target, {
-    get(obj, prop) {
-      const value = Reflect.get(obj, prop, obj) as unknown;
-      if (typeof value === "function") {
-        const fn = value as (...args: unknown[]) => unknown;
-        if (prop === "$disconnect" || prop === "$connect") {
-          return fn.bind(obj);
+function bindWithRetry<T extends (...args: unknown[]) => unknown>(
+  fn: T,
+  context: object
+): T {
+  return ((...args: unknown[]) =>
+    withDbRetry(() => Promise.resolve(fn.apply(context, args)))) as T;
+}
+
+function createModelProxy(modelKey: string | symbol): object {
+  return new Proxy(
+    {},
+    {
+      get(_target, prop) {
+        const client = getPrisma();
+        const model = Reflect.get(client, modelKey, client) as object;
+        const value = Reflect.get(model, prop, model);
+        if (typeof value === "function") {
+          return bindWithRetry(
+            value as (...args: unknown[]) => unknown,
+            model
+          );
         }
-        return (...args: unknown[]) => withDbRetry(() => fn.apply(obj, args));
+        return value;
+      },
+    }
+  );
+}
+
+function createPrismaProxy(): PrismaClient {
+  return new Proxy({} as PrismaClient, {
+    get(_target, prop) {
+      const client = getPrisma();
+      const value = Reflect.get(client, prop, client) as unknown;
+
+      if (typeof value === "function") {
+        if (prop === "$disconnect" || prop === "$connect") {
+          return (value as (...args: unknown[]) => unknown).bind(client);
+        }
+        return bindWithRetry(value as (...args: unknown[]) => unknown, client);
       }
+
       if (value && typeof value === "object") {
-        return wrapClientWithRetry(value as object);
+        return createModelProxy(prop);
       }
+
       return value;
     },
-  }) as T;
+  }) as PrismaClient;
 }
 
-export const prisma = wrapClientWithRetry(getPrisma());
+export const prisma = createPrismaProxy();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = getPrisma();
+  getPrisma();
 }
 
 export default prisma;

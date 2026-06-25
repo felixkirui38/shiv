@@ -12,7 +12,9 @@ export function isDbConnectionError(error: unknown): boolean {
     message.includes("ECONNRESET") ||
     message.includes("read ECONNRESET") ||
     message.includes("ECONNREFUSED") ||
-    message.includes("Connection refused")
+    message.includes("Connection refused") ||
+    message.includes("Cannot use a pool after calling end") ||
+    message.includes("after calling end on the pool")
   );
 }
 
