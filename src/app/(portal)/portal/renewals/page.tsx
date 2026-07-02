@@ -24,19 +24,32 @@ interface RenewalPolicy {
   autoRenew: boolean;
 }
 
-const PROVIDERS = [
-  { value: "STRIPE", label: "Stripe (Card)" },
-  { value: "PESAPAL", label: "Pesapal" },
-  { value: "FLUTTERWAVE", label: "Flutterwave" },
-  { value: "MPESA", label: "M-Pesa" },
-];
+const PROVIDER_LABELS: Record<string, string> = {
+  STRIPE: "Stripe (Card)",
+  PESAPAL: "Pesapal",
+  FLUTTERWAVE: "Flutterwave",
+  MPESA: "M-Pesa",
+};
 
 export default function RenewalsPage() {
   const [policies, setPolicies] = useState<RenewalPolicy[]>([]);
   const [loading, setLoading] = useState(true);
   const [renewing, setRenewing] = useState<string | null>(null);
-  const [provider, setProvider] = useState("STRIPE");
+  const [providers, setProviders] = useState<string[]>([]);
+  const [provider, setProvider] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/payments/checkout")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && Array.isArray(d.data.providers) && d.data.providers.length > 0) {
+          setProviders(d.data.providers);
+          setProvider(d.data.providers[0]);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -98,9 +111,9 @@ export default function RenewalsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {PROVIDERS.map((p) => (
-              <SelectItem key={p.value} value={p.value}>
-                {p.label}
+            {providers.map((p) => (
+              <SelectItem key={p} value={p}>
+                {PROVIDER_LABELS[p] ?? p}
               </SelectItem>
             ))}
           </SelectContent>

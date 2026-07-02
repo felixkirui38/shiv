@@ -1,4 +1,5 @@
 import type { SiteNavigationConfig, NavLink } from "@/types/navigation";
+import { CURRENCY_CONVERTER_LINK_HREF } from "@/lib/currency";
 
 export const defaultProductNavLinks: NavLink[] = [
   {
@@ -36,12 +37,6 @@ export const defaultProductNavLinks: NavLink[] = [
     href: "/products/marine-insurance",
     description: "Cargo, hull and freight transit insurance.",
     icon: "ship",
-  },
-  {
-    label: "Pet Insurance",
-    href: "/products/pet-insurance",
-    description: "Veterinary care for your beloved pets.",
-    icon: "paw",
   },
   {
     label: "Home Insurance",
@@ -174,6 +169,7 @@ export const defaultSiteNavigation: SiteNavigationConfig = {
           { label: "Careers", href: "/careers" },
           { label: "FAQ", href: "/faq" },
           { label: "Contact", href: "/contact" },
+          { label: "Currency Converter", href: CURRENCY_CONVERTER_LINK_HREF },
         ],
       },
       {

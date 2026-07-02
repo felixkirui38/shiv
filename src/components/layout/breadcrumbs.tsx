@@ -35,7 +35,6 @@ const LABEL_MAP: Record<string, string> = {
   "home-insurance": "Home Insurance",
   "business-insurance": "Business Insurance",
   "marine-insurance": "Marine Insurance",
-  "pet-insurance": "Pet Insurance",
 };
 
 function formatSegment(segment: string): string {

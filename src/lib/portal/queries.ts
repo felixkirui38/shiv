@@ -123,6 +123,91 @@ export async function listPortalPolicies(userId: string) {
   }));
 }
 
+export async function getPortalPolicyById(userId: string, policyId: string) {
+  const policy = await prisma.policy.findFirst({
+    where: { id: policyId, userId },
+    include: {
+      product: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          icon: true,
+          category: true,
+          shortDescription: true,
+        },
+      },
+      application: {
+        select: { applicationNumber: true, status: true },
+      },
+      order: {
+        select: { orderNumber: true, status: true, totalAmount: true, paidAt: true },
+      },
+      documents: {
+        include: { media: { select: { url: true, mimeType: true, originalName: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+      claims: {
+        select: { id: true, claimNumber: true, status: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      },
+      renewals: {
+        select: { id: true, premium: true, renewedAt: true, newEnd: true },
+        orderBy: { renewedAt: "desc" },
+        take: 3,
+      },
+      _count: { select: { claims: true, payments: true } },
+    },
+  });
+
+  if (!policy) return null;
+
+  return {
+    id: policy.id,
+    policyNumber: policy.policyNumber,
+    status: policy.status,
+    premium: Number(policy.premium),
+    coverageAmount: policy.coverageAmount ? Number(policy.coverageAmount) : null,
+    deductible: policy.deductible ? Number(policy.deductible) : null,
+    startDate: policy.startDate?.toISOString() ?? null,
+    endDate: policy.endDate?.toISOString() ?? null,
+    renewalDate: policy.renewalDate?.toISOString() ?? null,
+    autoRenew: policy.autoRenew,
+    createdAt: policy.createdAt.toISOString(),
+    product: policy.product,
+    application: policy.application,
+    order: policy.order
+      ? {
+          ...policy.order,
+          totalAmount: Number(policy.order.totalAmount),
+          paidAt: policy.order.paidAt?.toISOString() ?? null,
+        }
+      : null,
+    documents: policy.documents.map((d) => ({
+      id: d.id,
+      name: d.name,
+      type: d.type,
+      url: d.media.url,
+      mimeType: d.media.mimeType,
+      createdAt: d.createdAt.toISOString(),
+    })),
+    recentClaims: policy.claims.map((c) => ({
+      id: c.id,
+      claimNumber: c.claimNumber,
+      status: c.status,
+      createdAt: c.createdAt.toISOString(),
+    })),
+    renewals: policy.renewals.map((r) => ({
+      id: r.id,
+      premium: Number(r.premium),
+      renewedAt: r.renewedAt.toISOString(),
+      newEnd: r.newEnd.toISOString(),
+    })),
+    counts: policy._count,
+  };
+}
+
 export async function listPortalDocuments(userId: string) {
   const [policyDocs, claimDocs, invoices] = await Promise.all([
     prisma.policyDocument.findMany({

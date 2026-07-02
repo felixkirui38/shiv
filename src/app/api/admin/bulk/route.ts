@@ -9,6 +9,7 @@ const BULK_RESOURCES: Record<string, Permission> = {
   faqs: PERMISSIONS.FAQ_MANAGE,
   testimonials: PERMISSIONS.TESTIMONIALS_MANAGE,
   partners: PERMISSIONS.PARTNERS_MANAGE,
+  statistics: PERMISSIONS.CMS_MANAGE,
   "blog-posts": PERMISSIONS.BLOG_MANAGE,
 };
 
@@ -22,6 +23,8 @@ async function bulkDelete(resource: string, ids: string[]) {
       return prisma.testimonial.deleteMany({ where: { id: { in: ids } } });
     case "partners":
       return prisma.partner.deleteMany({ where: { id: { in: ids } } });
+    case "statistics":
+      return prisma.statistic.deleteMany({ where: { id: { in: ids } } });
     case "blog-posts":
       return prisma.blogPost.deleteMany({ where: { id: { in: ids } } });
     default:

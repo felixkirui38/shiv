@@ -15,11 +15,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getIcon } from "@/lib/icons";
+import { isRetiredProductSlug } from "@/lib/products/retired";
 
 export function ProductsGridSection() {
   const { products } = useHomepage();
   const cards = products.cards
-    .filter((c) => c.enabled)
+    .filter((c) => c.enabled && !isRetiredProductSlug(c.slug))
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (

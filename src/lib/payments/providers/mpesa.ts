@@ -84,6 +84,27 @@ export const mpesaProvider: PaymentProviderAdapter = {
     };
   },
 
+  verifyWebhook(body: string, headers: Record<string, string>) {
+    const secret = process.env.MPESA_WEBHOOK_SECRET;
+    if (secret) {
+      const provided =
+        headers["x-mpesa-webhook-secret"] ??
+        headers["authorization"]?.replace(/^Bearer\s+/i, "");
+      if (provided !== secret) return false;
+    } else if (process.env.NODE_ENV === "production") {
+      return false;
+    }
+
+    try {
+      const payload = JSON.parse(body) as {
+        Body?: { stkCallback?: { CheckoutRequestID?: string } };
+      };
+      return Boolean(payload.Body?.stkCallback?.CheckoutRequestID);
+    } catch {
+      return false;
+    }
+  },
+
   parseWebhook(body: unknown): WebhookPaymentUpdate | null {
     const payload = body as {
       Body?: {

@@ -1,5 +1,7 @@
 export const BASE_CURRENCY = "KES" as const;
 
+export const CURRENCY_CONVERTER_LINK_HREF = "#currency-converter";
+
 export type CurrencyCode =
   | typeof BASE_CURRENCY
   | "USD"

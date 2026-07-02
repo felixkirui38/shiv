@@ -7,6 +7,13 @@ import { PurchaseStepPanels } from "@/components/purchase/purchase-step-panels";
 import type { CmsFormDefinition, PurchaseApplicationState } from "@/types/purchase";
 import { TOTAL_PURCHASE_STEPS } from "@/types/purchase";
 
+function friendlyPurchaseError(message: string): string {
+  if (/pool|prisma|invalid.*invocation|ECONN|connection/i.test(message)) {
+    return "This service is temporarily unavailable. Please ensure the database is running and try again.";
+  }
+  return message;
+}
+
 interface PurchaseWizardProps {
   productSlug: string;
   productName: string;
@@ -67,7 +74,8 @@ export function PurchaseWizard({
         router.replace(`/products/${productSlug}/buy?resume=${app.resumeToken}`);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load purchase flow");
+      const raw = e instanceof Error ? e.message : "Failed to load purchase flow";
+      setError(friendlyPurchaseError(raw));
     } finally {
       setBooting(false);
     }

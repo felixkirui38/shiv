@@ -11,20 +11,24 @@ import {
   serializeProduct,
   serializeProductListItem,
 } from "@/lib/products/types";
+import { isRetiredProductSlug, RETIRED_PRODUCT_SLUGS, withoutRetiredProducts } from "@/lib/products/retired";
 
 export async function getActiveProducts() {
   try {
     const products = await withDbRetry(() =>
       prisma.insuranceProduct.findMany({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          slug: { notIn: [...RETIRED_PRODUCT_SLUGS] },
+        },
         orderBy: { sortOrder: "asc" },
         include: productListInclude,
       })
     );
-    if (products.length === 0) return getFallbackActiveProducts();
+    if (products.length === 0) return withoutRetiredProducts(getFallbackActiveProducts());
     return products.map(serializeProductListItem);
   } catch {
-    return getFallbackActiveProducts();
+    return withoutRetiredProducts(getFallbackActiveProducts());
   }
 }
 
@@ -41,6 +45,8 @@ export async function getAllProducts() {
 }
 
 export async function getProductBySlug(slug: string) {
+  if (isRetiredProductSlug(slug)) return null;
+
   try {
     const product = await withDbRetry(() =>
       prisma.insuranceProduct.findUnique({
@@ -73,13 +79,22 @@ export async function getProductSlugs() {
   try {
     const products = await withDbRetry(() =>
       prisma.insuranceProduct.findMany({
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          slug: { notIn: [...RETIRED_PRODUCT_SLUGS] },
+        },
         select: { slug: true },
       })
     );
-    if (products.length === 0) return getFallbackProductSlugs();
+    if (products.length === 0) {
+      return withoutRetiredProducts(
+        getFallbackProductSlugs().map((slug) => ({ slug }))
+      ).map((p) => p.slug);
+    }
     return products.map((p) => p.slug);
   } catch {
-    return getFallbackProductSlugs();
+    return withoutRetiredProducts(
+      getFallbackProductSlugs().map((slug) => ({ slug }))
+    ).map((p) => p.slug);
   }
 }

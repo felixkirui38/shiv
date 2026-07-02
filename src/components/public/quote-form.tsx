@@ -19,10 +19,47 @@ import { useProducts } from "@/hooks/use-products";
 export function QuoteForm() {
   const { products } = useProducts();
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [productSlug, setProductSlug] = useState("");
+  const [message, setMessage] = useState("");
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          phone,
+          productSlug: productSlug || undefined,
+          message,
+          source: "quote-form",
+        }),
+      });
+      const data = (await res.json()) as { success?: boolean; error?: string };
+
+      if (!res.ok || !data.success) {
+        setError(data.error ?? "Failed to submit request. Please try again.");
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setError("Failed to submit request. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -62,24 +99,48 @@ export function QuoteForm() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" required className="mt-1.5 border-brand" />
+                      <Input
+                        id="firstName"
+                        required
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className="mt-1.5 border-brand"
+                      />
                     </div>
                     <div>
                       <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" required className="mt-1.5 border-brand" />
+                      <Input
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className="mt-1.5 border-brand"
+                      />
                     </div>
                   </div>
                   <div>
                     <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" required className="mt-1.5 border-brand" />
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="mt-1.5 border-brand"
+                    />
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" type="tel" required className="mt-1.5 border-brand" />
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="mt-1.5 border-brand"
+                    />
                   </div>
                   <div>
                     <Label>Insurance Product</Label>
-                    <Select required>
+                    <Select value={productSlug} onValueChange={(v) => v && setProductSlug(v)}>
                       <SelectTrigger className="mt-1.5 border-brand">
                         <SelectValue placeholder="Select a product" />
                       </SelectTrigger>
@@ -97,12 +158,25 @@ export function QuoteForm() {
                     <Textarea
                       id="message"
                       rows={3}
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
                       className="mt-1.5 border-brand"
                       placeholder="Tell us about your insurance needs..."
                     />
                   </div>
-                  <Button type="submit" variant="accent" className="w-full" size="lg">
-                    Submit Quote Request
+                  {error && (
+                    <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                      {error}
+                    </p>
+                  )}
+                  <Button
+                    type="submit"
+                    variant="accent"
+                    className="w-full"
+                    size="lg"
+                    disabled={loading}
+                  >
+                    {loading ? "Submitting…" : "Submit Quote Request"}
                   </Button>
                 </form>
               )}

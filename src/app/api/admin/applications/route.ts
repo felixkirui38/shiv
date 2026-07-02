@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin/auth";
 import { parseListParams } from "@/lib/admin/queries";
 import { toCsv, csvResponse } from "@/lib/admin/export";
+import { updateAdminApplication } from "@/lib/admin/applications";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { PERMISSIONS } from "@/lib/permissions";
 
@@ -91,23 +92,9 @@ export async function PATCH(req: Request) {
 
   if (!body.id || !body.action) return apiError("id and action required", 400);
 
-  const data =
-    body.action === "approve"
-      ? { status: "APPROVED" as const, reviewNotes: body.notes }
-      : body.action === "reject"
-        ? {
-            status: "REJECTED" as const,
-            rejectionReason: body.reason ?? "Application rejected",
-            reviewNotes: body.notes,
-          }
-        : {
-            status: "PENDING_REVIEW" as const,
-            reviewNotes: body.notes ?? "Additional documents requested",
-          };
-
-  const updated = await prisma.insuranceApplication.update({
-    where: { id: body.id },
-    data,
+  const updated = await updateAdminApplication(body.id, body.action, {
+    reason: body.reason,
+    notes: body.notes,
   });
 
   return apiSuccess(updated);

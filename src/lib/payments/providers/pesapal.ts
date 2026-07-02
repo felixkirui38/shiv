@@ -68,6 +68,32 @@ export const pesapalProvider: PaymentProviderAdapter = {
     };
   },
 
+  verifyWebhook(body: string, headers: Record<string, string>) {
+    const secret = process.env.PESAPAL_WEBHOOK_SECRET ?? process.env.PESAPAL_IPN_SECRET;
+    if (secret) {
+      const provided =
+        headers["x-pesapal-signature"] ??
+        headers["x-webhook-secret"] ??
+        headers["authorization"]?.replace(/^Bearer\s+/i, "");
+      if (provided !== secret) return false;
+    } else if (process.env.NODE_ENV === "production") {
+      return false;
+    }
+
+    try {
+      const payload = JSON.parse(body) as {
+        OrderTrackingId?: string;
+        OrderMerchantReference?: string;
+      };
+      return Boolean(payload.OrderTrackingId || payload.OrderMerchantReference);
+    } catch {
+      const params = new URLSearchParams(body);
+      return Boolean(
+        params.get("OrderTrackingId") || params.get("OrderMerchantReference")
+      );
+    }
+  },
+
   parseWebhook(body: unknown): WebhookPaymentUpdate | null {
     const data = body as {
       OrderNotificationType?: string;

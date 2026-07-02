@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getActiveProducts } from "@/lib/products/queries";
 import { buildPageMetadata } from "@/lib/seo";
 import { ProductListing } from "@/components/products/product-listing";
+import { QuoteForm } from "@/components/public/quote-form";
 import { AnimatedSection } from "@/components/shared/animated-section";
 
 export const revalidate = 60;
@@ -10,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return buildPageMetadata("/products", {
     title: "Insurance Products",
     description:
-      "Browse our comprehensive range of insurance products — motor, medical, travel, life, business, marine, home, and pet cover.",
+      "Browse our comprehensive range of insurance products — motor, medical, travel, life, business, marine, and home cover.",
   });
 }
 
@@ -31,6 +32,7 @@ export default async function ProductsPage() {
         </p>
       </AnimatedSection>
       <ProductListing products={products} />
+      <QuoteForm />
     </div>
   );
 }

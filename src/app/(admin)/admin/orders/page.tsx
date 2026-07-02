@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { AdminDataTable } from "@/components/admin/admin-data-table";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 
@@ -15,6 +16,8 @@ const STATUSES = [
 ].map((s) => ({ value: s, label: s.replace(/_/g, " ") }));
 
 export default function AdminOrdersPage() {
+  const router = useRouter();
+
   return (
     <div>
       <AdminPageHeader
@@ -23,6 +26,7 @@ export default function AdminOrdersPage() {
       />
       <AdminDataTable
         apiPath="/api/admin/orders"
+        onRowClick={(row) => router.push(`/admin/orders/${row.id}`)}
         columns={[
           { key: "orderNumber", label: "Order #" },
           { key: "insuranceName", label: "Product" },

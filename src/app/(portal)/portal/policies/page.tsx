@@ -141,6 +141,12 @@ export default function PoliciesPage() {
                   )}
 
                   <div className="mt-5 flex flex-wrap gap-2 border-t border-brand-border/50 pt-4">
+                    <Link
+                      href={`/portal/policies/${policy.id}`}
+                      className={cn(buttonVariants({ variant: "default", size: "sm" }))}
+                    >
+                      View details
+                    </Link>
                     <button
                       type="button"
                       onClick={() => downloadCertificate(policy.id)}

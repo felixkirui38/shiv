@@ -2,6 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { withDbRetry } from "@/lib/db-retry";
 import { edgeAuthConfig } from "@/lib/auth.edge";
 
 function resolveAuthSecret() {
@@ -29,9 +30,11 @@ export const authConfig: NextAuthConfig = {
 
           const email = (credentials.email as string).trim().toLowerCase();
 
-          const user = await prisma.user.findUnique({
-            where: { email },
-          });
+          const user = await withDbRetry(() =>
+            prisma.user.findUnique({
+              where: { email },
+            })
+          );
 
           if (!user?.passwordHash) return null;
           if (user.status === "SUSPENDED" || user.status === "INACTIVE") return null;

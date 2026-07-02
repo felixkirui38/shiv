@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { ImageIcon, X } from "lucide-react";
+import { ImageIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -30,9 +30,10 @@ export function MediaPicker({ value, imageUrl, onChange, label = "Featured image
   const [items, setItems] = useState<MediaItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
+  function loadMedia() {
     setLoading(true);
     const params = new URLSearchParams({ limit: "40" });
     if (search) params.set("search", search);
@@ -42,7 +43,28 @@ export function MediaPicker({ value, imageUrl, onChange, label = "Featured image
         if (d.success) setItems(d.data.items ?? []);
       })
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    loadMedia();
   }, [open, search]);
+
+  async function handleUpload(file: File) {
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/admin/media", { method: "POST", body });
+      const data = await res.json();
+      if (data.success) {
+        onChange(data.data.id, data.data.url);
+        setOpen(false);
+      }
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -78,6 +100,29 @@ export function MediaPicker({ value, imageUrl, onChange, label = "Featured image
               onChange={(e) => setSearch(e.target.value)}
               className="mt-4"
             />
+            <div className="mt-3">
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.gif,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleUpload(file);
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={uploading}
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload className="size-4" />
+                {uploading ? "Uploading…" : "Upload new"}
+              </Button>
+            </div>
             {loading ? (
               <p className="mt-6 text-sm text-slate-500">Loading…</p>
             ) : (

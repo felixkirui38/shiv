@@ -1,12 +1,15 @@
-export function isDbConnectionError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const e = error as { code?: string; message?: string };
+export function isDbConnectionError(error: unknown, depth = 0): boolean {
+  if (!error || typeof error !== "object" || depth > 4) return false;
+
+  const e = error as { code?: string; message?: string; cause?: unknown };
   const message = e.message ?? "";
-  return (
+
+  if (
     e.code === "P1001" ||
     e.code === "P1008" ||
     e.code === "P1017" ||
     e.code === "ECONNREFUSED" ||
+    e.code === "ECONNRESET" ||
     message.includes("closed the connection") ||
     message.includes("Connection terminated") ||
     message.includes("ECONNRESET") ||
@@ -14,8 +17,39 @@ export function isDbConnectionError(error: unknown): boolean {
     message.includes("ECONNREFUSED") ||
     message.includes("Connection refused") ||
     message.includes("Cannot use a pool after calling end") ||
-    message.includes("after calling end on the pool")
-  );
+    message.includes("after calling end on the pool") ||
+    message.includes("timeout exceeded when trying to connect")
+  ) {
+    return true;
+  }
+
+  if (e.cause) {
+    return isDbConnectionError(e.cause, depth + 1);
+  }
+
+  return false;
+}
+
+export function toUserFacingDbError(fallback: string): string {
+  return fallback;
+}
+
+export function sanitizeApiErrorMessage(
+  message: string | undefined,
+  fallback: string
+): string {
+  if (!message) return fallback;
+  if (isDbConnectionError({ message })) {
+    return "Service is temporarily unavailable. Please try again in a moment.";
+  }
+  if (
+    message.includes("prisma") ||
+    message.includes("pool") ||
+    message.includes("Invalid `")
+  ) {
+    return fallback;
+  }
+  return message;
 }
 
 export async function withDbRetry<T>(
@@ -32,12 +66,17 @@ export async function withDbRetry<T>(
       if (!isDbConnectionError(error) || attempt === maxAttempts - 1) {
         throw error;
       }
-      const { resetPrisma } = await import("@/lib/prisma");
+      const { resetPrisma, getPrisma, getLastPrismaResetAt } = await import("@/lib/prisma");
       console.warn(
         `[prisma] Database connection lost — reconnecting (attempt ${attempt + 2}/${maxAttempts})…`
       );
-      await resetPrisma();
-      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+      const recentlyReset = Date.now() - getLastPrismaResetAt() < 2_000;
+      if (!recentlyReset) {
+        await resetPrisma();
+      } else {
+        getPrisma();
+      }
+      await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
     }
   }
 

@@ -17,10 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  CalculatorField,
-  PremiumCalculationResult,
-} from "@/lib/premium-engine/types";
+import { isRetiredProductSlug } from "@/lib/products/retired";
 
 function FieldInput({
   field,
@@ -65,7 +62,9 @@ function FieldInput({
 
 export function CoverageCalculatorSection() {
   const { calculator, products } = useHomepage();
-  const enabledProducts = products.cards.filter((c) => c.enabled);
+  const enabledProducts = products.cards.filter(
+    (c) => c.enabled && !isRetiredProductSlug(c.slug)
+  );
   const [slug, setSlug] = useState(enabledProducts[0]?.slug ?? "");
   const [fields, setFields] = useState<CalculatorField[]>([]);
   const [factors, setFactors] = useState<Record<string, string | number>>({});

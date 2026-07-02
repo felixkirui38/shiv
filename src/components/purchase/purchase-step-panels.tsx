@@ -86,6 +86,9 @@ export function PurchaseStepPanels({
           form={form}
           values={formData}
           errors={fieldErrors}
+          applicationId={application.id}
+          resumeToken={application.resumeToken}
+          onUploadError={setError}
           onChange={(key, value) => setFormData((prev) => ({ ...prev, [key]: value }))}
         />
         <div className="mt-8 flex justify-end">

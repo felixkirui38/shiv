@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo";
+import { StaticCmsPage, getStaticPageMeta } from "@/components/public/static-cms-page";
+import { getPublicCmsPage } from "@/lib/cms/public-content";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const page = await getPublicCmsPage("terms");
+  const fallback = getStaticPageMeta("terms");
   return buildPageMetadata("/terms", {
-    title: "Terms of Service",
-    description: "Terms and conditions for using Shiv Insurance Brokers services.",
+    title: page?.metaTitle ?? page?.title ?? fallback.title,
+    description: page?.metaDescription ?? fallback.description,
   });
 }
 
 export default function TermsPage() {
-  return (
-    <div className="container mx-auto px-4 py-16">
-      <h1 className="mb-6 text-4xl font-bold">Terms of Service</h1>
-      <p className="text-muted-foreground">Terms and conditions.</p>
-    </div>
-  );
+  return <StaticCmsPage slug="terms" />;
 }

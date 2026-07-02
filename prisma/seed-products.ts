@@ -206,31 +206,11 @@ export const defaultProductsSeed: ProductSeedData[] = [
     faqs: [{ question: "Are domestic workers covered?", answer: "Employer liability extension available as add-on.", sortOrder: 0 }],
     sortOrder: 6,
   },
-  {
-    name: "Pet Insurance",
-    slug: "pet-insurance",
-    category: "pet",
-    icon: "paw",
-    shortDescription: "Veterinary care coverage for your pets.",
-    longDescription: "Pet insurance covering accidents, illnesses, and optional wellness care for dogs and cats.",
-    basePremium: 350,
-    pricingFormula: { coverageBase: 50000, coverageRate: 1 },
-    claimProcedure: "Visit any licensed vet. Submit claim form with invoices within 14 days of treatment.",
-    terms: "Age limits and breed restrictions may apply.",
-    benefits: [
-      { title: "Accident cover", description: "Emergency veterinary treatment", sortOrder: 0 },
-      { title: "Illness cover", description: "Diagnostic and treatment costs", sortOrder: 1 },
-    ],
-    coverages: [{ name: "Veterinary Fees", limit: 200000, sortOrder: 0 }],
-    exclusions: [{ title: "Pre-existing conditions", description: "Conditions before policy start", sortOrder: 0 }],
-    eligibilityItems: [{ title: "Pet age", description: "Typically 8 weeks to 8 years at entry", sortOrder: 0 }],
-    requiredDocuments: [{ name: "Vaccination records", isRequired: true, sortOrder: 0 }],
-    faqs: [{ question: "Which pets are covered?", answer: "Dogs and cats. Exotic pets on referral.", sortOrder: 0 }],
-    sortOrder: 7,
-  },
 ];
 
 export async function seedProducts(prisma: PrismaClient) {
+  await retirePetInsurance(prisma);
+
   for (const data of defaultProductsSeed) {
     const { premiumRules, benefits, coverages, exclusions, eligibilityItems, requiredDocuments, faqs, ...product } = data;
 
@@ -307,4 +287,20 @@ export async function seedProducts(prisma: PrismaClient) {
       });
     }
   }
+}
+
+async function retirePetInsurance(prisma: PrismaClient) {
+  const product = await prisma.insuranceProduct.findUnique({
+    where: { slug: "pet-insurance" },
+  });
+  if (!product) return;
+
+  await prisma.formDefinition.updateMany({
+    where: { productId: product.id },
+    data: { isActive: false },
+  });
+  await prisma.insuranceProduct.update({
+    where: { id: product.id },
+    data: { isActive: false },
+  });
 }

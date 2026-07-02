@@ -9,6 +9,7 @@ export const defaultHomepageContent: HomepageContent = {
     primaryButtonHref: "/products",
     secondaryButtonLabel: "Learn More",
     secondaryButtonHref: "/about",
+    backgroundImageUrl: "/images/hero-background.jpg",
     images: [
       {
         id: "business",
@@ -79,7 +80,7 @@ export const defaultHomepageContent: HomepageContent = {
   products: {
     title: "Our Insurance Products",
     subtitle:
-      "Comprehensive coverage across eight product lines — tailored to your needs.",
+      "Comprehensive coverage across seven product lines — tailored to your needs.",
     cards: [
       {
         id: "motor",
@@ -136,22 +137,13 @@ export const defaultHomepageContent: HomepageContent = {
         sortOrder: 5,
       },
       {
-        id: "pet",
-        label: "Pet",
-        slug: "pet-insurance",
-        description: "Veterinary care for your beloved pets.",
-        icon: "paw",
-        enabled: true,
-        sortOrder: 6,
-      },
-      {
         id: "home",
         label: "Home",
         slug: "home-insurance",
         description: "Protect your home and belongings.",
         icon: "home",
         enabled: true,
-        sortOrder: 7,
+        sortOrder: 6,
       },
     ],
   },
@@ -340,7 +332,7 @@ export const defaultHomepageContent: HomepageContent = {
       {
         question: "What types of insurance does Shiv Insurance offer?",
         answer:
-          "We offer motor, medical, travel, life, home, business, marine, and pet insurance through leading underwriters.",
+          "We offer motor, medical, travel, life, home, business, and marine insurance through leading underwriters.",
       },
       {
         question: "How do I file an insurance claim?",
@@ -365,9 +357,9 @@ export const defaultHomepageContent: HomepageContent = {
     ],
   },
   cta: {
-    title: "Ready to Protect What Matters?",
+    title: "Currency Converter",
     subtitle:
-      "Purchase insurance cover online in minutes with Shiv Insurance Brokers.",
+      "Check indicative exchange rates for premiums and international cover. Rates are for reference only.",
     primaryButtonLabel: "Purchase Insurance",
     primaryButtonHref: "/products",
     secondaryButtonLabel: "Contact Us",

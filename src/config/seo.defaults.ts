@@ -67,7 +67,7 @@ export const defaultSeoSettings: SeoCmsData = {
     "/products": {
       title: "Insurance Products",
       description:
-        "Browse and purchase motor, medical, travel, life, home, business, marine, and pet insurance online.",
+        "Browse and purchase motor, medical, travel, life, home, business, and marine insurance online.",
     },
     "/blog": {
       title: "Insurance Blog",

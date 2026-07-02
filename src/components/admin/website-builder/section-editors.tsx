@@ -98,6 +98,18 @@ export function SectionEditors({
             />
           </Field>
         </div>
+        <Field label="Background image URL">
+          <Input
+            value={homepage.hero.backgroundImageUrl ?? ""}
+            onChange={(e) =>
+              update("hero", {
+                ...homepage.hero,
+                backgroundImageUrl: e.target.value || undefined,
+              })
+            }
+            placeholder="/images/hero-background.jpg"
+          />
+        </Field>
         <div className="space-y-2">
           <Label className="text-xs font-medium text-slate-600">Hero images</Label>
           {homepage.hero.images.map((img, i) => (
@@ -447,53 +459,23 @@ export function SectionEditors({
   if (panel === "cta") {
     return (
       <div className="space-y-4">
-        <Field label="Title">
+        <Field label="Section title">
           <Input
             value={homepage.cta.title}
             onChange={(e) => update("cta", { ...homepage.cta, title: e.target.value })}
           />
         </Field>
-        <Field label="Subtitle">
+        <Field label="Section subtitle">
           <Textarea
             value={homepage.cta.subtitle ?? ""}
             onChange={(e) => update("cta", { ...homepage.cta, subtitle: e.target.value })}
             rows={2}
           />
         </Field>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Primary button">
-            <Input
-              value={homepage.cta.primaryButtonLabel}
-              onChange={(e) =>
-                update("cta", { ...homepage.cta, primaryButtonLabel: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="Primary link">
-            <Input
-              value={homepage.cta.primaryButtonHref}
-              onChange={(e) =>
-                update("cta", { ...homepage.cta, primaryButtonHref: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="Secondary button">
-            <Input
-              value={homepage.cta.secondaryButtonLabel}
-              onChange={(e) =>
-                update("cta", { ...homepage.cta, secondaryButtonLabel: e.target.value })
-              }
-            />
-          </Field>
-          <Field label="Secondary link">
-            <Input
-              value={homepage.cta.secondaryButtonHref}
-              onChange={(e) =>
-                update("cta", { ...homepage.cta, secondaryButtonHref: e.target.value })
-              }
-            />
-          </Field>
-        </div>
+        <p className="text-sm text-slate-600">
+          The currency converter layout is fixed. Title and subtitle appear above
+          the exchange rate tool on the homepage.
+        </p>
       </div>
     );
   }

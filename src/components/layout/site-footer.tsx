@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   Phone,
@@ -10,23 +11,48 @@ import {
 import { Logo } from "@/components/brand/logo";
 import { SocialIcon } from "@/components/brand/social-icons";
 import { NewsletterForm } from "@/components/layout/newsletter-form";
-import { FooterCurrencySelector } from "@/components/layout/footer-currency-selector";
+import {
+  CurrencyConverterModal,
+} from "@/components/currency/currency-converter-modal";
+import { CURRENCY_CONVERTER_LINK_HREF } from "@/lib/currency";
 import { Separator } from "@/components/ui/separator";
 import { useSiteNavigation } from "@/components/providers/navigation-provider";
-import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { FooterLicenseTrigger } from "@/components/layout/footer-license-trigger";
 import { brand } from "@/lib/brand";
+import type { NavLink } from "@/types/navigation";
 
-export function SiteFooter() {
+function FooterColumnLink({
+  link,
+  onCurrencyOpen,
+}: {
+  link: NavLink;
+  onCurrencyOpen: () => void;
+}) {
+  if (link.href === CURRENCY_CONVERTER_LINK_HREF) {
+    return (
+      <button
+        type="button"
+        onClick={onCurrencyOpen}
+        className="text-left text-sm text-white/75 transition-colors hover:text-white"
+      >
+        {link.label}
+      </button>
+    );
+  }
+
   return (
-    <CurrencyProvider>
-      <SiteFooterContent />
-    </CurrencyProvider>
+    <Link
+      href={link.href}
+      className="text-sm text-white/75 transition-colors hover:text-white"
+    >
+      {link.label}
+    </Link>
   );
 }
 
-function SiteFooterContent() {
+export function SiteFooter() {
   const { footer } = useSiteNavigation();
+  const [currencyOpen, setCurrencyOpen] = useState(false);
 
   return (
     <footer className="border-t border-brand bg-primary text-white">
@@ -89,13 +115,11 @@ function SiteFooterContent() {
               </h4>
               <ul className="space-y-2.5">
                 {column.links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-white/75 transition-colors hover:text-white"
-                    >
-                      {link.label}
-                    </Link>
+                  <li key={`${column.title}-${link.label}`}>
+                    <FooterColumnLink
+                      link={link}
+                      onCurrencyOpen={() => setCurrencyOpen(true)}
+                    />
                   </li>
                 ))}
               </ul>
@@ -110,10 +134,6 @@ function SiteFooterContent() {
 
         <Separator className="my-8 bg-white/15 md:my-10" />
 
-        <div className="mb-4 flex justify-center md:justify-end">
-          <FooterCurrencySelector />
-        </div>
-
         {/* Copyright */}
         <div className="flex flex-col items-center justify-between gap-3 text-center text-sm text-white/60 md:flex-row md:text-left">
           <p>
@@ -125,6 +145,8 @@ function SiteFooterContent() {
           />
         </div>
       </div>
+
+      <CurrencyConverterModal open={currencyOpen} onOpenChange={setCurrencyOpen} />
     </footer>
   );
 }

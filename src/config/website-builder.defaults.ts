@@ -28,7 +28,7 @@ export const BUILDER_SECTION_META: {
   { id: "partners", label: "Partners", description: "Partner logos and names" },
   { id: "testimonials", label: "Testimonials", description: "Customer reviews" },
   { id: "faq", label: "FAQs", description: "Frequently asked questions" },
-  { id: "cta", label: "CTA", description: "Call-to-action banner" },
+  { id: "cta", label: "Currency Converter", description: "Exchange rate checker banner" },
   { id: "insuranceFinder", label: "Insurance Finder", description: "Coverage finder widget" },
   { id: "calculator", label: "Calculator", description: "Premium calculator section" },
   { id: "howItWorks", label: "How It Works", description: "Process steps" },
@@ -49,7 +49,7 @@ export const DEFAULT_SECTION_VISIBILITY: Record<WebsiteSectionId, boolean> = {
   testimonials: true,
   blog: true,
   faq: true,
-  cta: true,
+  cta: false,
 };
 
 export const LAYOUT_PANELS = [

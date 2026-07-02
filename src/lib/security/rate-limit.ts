@@ -123,6 +123,10 @@ export async function rateLimit(
 export const RATE_LIMITS = {
   auth: { limit: 10, windowSec: 60, prefix: "auth" },
   contact: { limit: 5, windowSec: 300, prefix: "contact" },
+  leads: { limit: 5, windowSec: 300, prefix: "leads" },
+  careers: { limit: 3, windowSec: 600, prefix: "careers" },
+  formDraft: { limit: 40, windowSec: 60, prefix: "form-draft" },
+  formSubmit: { limit: 10, windowSec: 300, prefix: "form-submit" },
   aiChat: { limit: 20, windowSec: 60, prefix: "ai" },
   api: { limit: 100, windowSec: 60, prefix: "api" },
   webhook: { limit: 200, windowSec: 60, prefix: "webhook" },

@@ -3,8 +3,32 @@ import { defaultSiteNavigation, defaultProductNavLinks } from "@/config/navigati
 import { getPublishedWebsiteConfig } from "@/lib/cms/website-builder";
 import type { SiteNavigationConfig } from "@/types/navigation";
 import { getActiveProducts } from "@/lib/products/queries";
+import { isRetiredProductSlug, withoutRetiredProducts } from "@/lib/products/retired";
 
 const NAV_SETTING_KEY = "site_navigation";
+
+function isRetiredProductHref(href: string): boolean {
+  const slug = href.replace(/^\/products\//, "").split(/[?#]/)[0];
+  return isRetiredProductSlug(slug);
+}
+
+function stripRetiredProductLinks(config: SiteNavigationConfig): SiteNavigationConfig {
+  const filterLinks = <T extends { href: string }>(links: T[]) =>
+    links.filter((link) => !isRetiredProductHref(link.href));
+
+  return {
+    ...config,
+    header: { ...config.header, products: filterLinks(config.header.products) },
+    footer: {
+      ...config.footer,
+      columns: config.footer.columns.map((col) =>
+        col.title === "Insurance Products"
+          ? { ...col, links: filterLinks(col.links) }
+          : col
+      ),
+    },
+  };
+}
 
 function mergeProductsIntoNav(
   config: SiteNavigationConfig,
@@ -12,7 +36,7 @@ function mergeProductsIntoNav(
 ): SiteNavigationConfig {
   const productLinks =
     products.length > 0
-      ? products.map((p) => ({
+      ? withoutRetiredProducts(products).map((p) => ({
           label: p.name,
           href: `/products/${p.slug}`,
           description: p.shortDescription ?? undefined,
@@ -77,9 +101,9 @@ export async function getSiteNavigation(): Promise<SiteNavigationConfig> {
 
   try {
     const products = await getActiveProducts();
-    return mergeProductsIntoNav(config, products);
+    return stripRetiredProductLinks(mergeProductsIntoNav(config, products));
   } catch {
-    return config;
+    return stripRetiredProductLinks(config);
   }
 }
 

@@ -32,14 +32,34 @@ const heroVisuals = [
 
 export function HeroSection() {
   const { hero } = useHomepage();
+  const backgroundUrl = hero.backgroundImageUrl ?? "/images/hero-background.jpg";
 
   return (
-    <section className="relative overflow-hidden bg-white">
-      <div className="absolute inset-y-0 right-0 hidden w-[38%] bg-brand-light lg:block" />
+    <section className="relative overflow-hidden">
+      <div className="absolute inset-0">
+        <Image
+          src={backgroundUrl}
+          alt=""
+          fill
+          priority
+          className="object-cover object-center brightness-[1.03] contrast-[1.05]"
+          sizes="100vw"
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/25 to-transparent"
+          aria-hidden
+        />
+      </div>
+
+      <div className="absolute inset-y-0 right-0 hidden w-[38%] bg-brand-light/15 lg:block" />
 
       <div className="container relative mx-auto px-4">
         <div className="grid items-center gap-10 py-14 md:gap-12 md:py-20 lg:grid-cols-2 lg:py-24">
-          <AnimatedSection direction="left">
+          <AnimatedSection direction="left" className="relative">
+            <div
+              className="absolute -inset-4 -z-10 rounded-2xl bg-white/55 backdrop-blur-[1px] sm:-inset-6 lg:bg-white/45"
+              aria-hidden
+            />
             <div className="accent-bar mb-5" />
             <h1 className="mb-5 font-heading text-4xl font-semibold leading-[1.15] text-dark sm:text-5xl lg:text-[3.25rem]">
               {hero.headline}

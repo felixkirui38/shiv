@@ -19,6 +19,7 @@ interface AdminDataTableProps<T extends Record<string, unknown> & { id: string }
   columns: ColumnDef<T>[];
   statusOptions?: { value: string; label: string }[];
   onRowClick?: (row: T) => void;
+  renderActions?: (row: T) => React.ReactNode;
   bulkDelete?: boolean;
   exportFilename?: string;
   emptyMessage?: string;
@@ -29,6 +30,7 @@ export function AdminDataTable<T extends Record<string, unknown> & { id: string 
   columns,
   statusOptions,
   onRowClick,
+  renderActions,
   bulkDelete = false,
   exportFilename = "export",
   emptyMessage = "No records found.",
@@ -151,6 +153,9 @@ export function AdminDataTable<T extends Record<string, unknown> & { id: string 
                   {columns.map((col) => (
                     <th key={col.key} className="px-4 py-3 text-left font-medium text-slate-600">{col.label}</th>
                   ))}
+                  {renderActions && (
+                    <th className="px-4 py-3 text-left font-medium text-slate-600">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -178,6 +183,11 @@ export function AdminDataTable<T extends Record<string, unknown> & { id: string 
                           : String((row as Record<string, unknown>)[col.key] ?? "—")}
                       </td>
                     ))}
+                    {renderActions && (
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        {renderActions(row)}
+                      </td>
+                    )}
                   </motion.tr>
                 ))}
               </tbody>

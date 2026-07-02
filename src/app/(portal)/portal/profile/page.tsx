@@ -238,7 +238,104 @@ export default function ProfilePage() {
             </Button>
           </form>
         </PortalCard>
+
+        <PortalCard className="mt-6">
+          <h2 className="font-heading text-lg font-semibold text-dark">Change password</h2>
+          <PasswordChangeForm />
+        </PortalCard>
       </motion.div>
     </div>
+  );
+}
+
+function PasswordChangeForm() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    if (newPassword !== confirmPassword) {
+      setError("New passwords do not match.");
+      return;
+    }
+
+    setSaving(true);
+    const res = await fetch("/api/portal/profile/password", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const data = await res.json();
+    setSaving(false);
+
+    if (data.success) {
+      setSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } else {
+      setError(data.error ?? "Password update failed");
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          Password updated successfully.
+        </div>
+      )}
+      <div>
+        <Label htmlFor="current-password">Current password</Label>
+        <Input
+          id="current-password"
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          required
+          className="mt-1"
+        />
+      </div>
+      <div>
+        <Label htmlFor="new-password">New password</Label>
+        <Input
+          id="new-password"
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+          minLength={8}
+          className="mt-1"
+        />
+      </div>
+      <div>
+        <Label htmlFor="confirm-password">Confirm new password</Label>
+        <Input
+          id="confirm-password"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          minLength={8}
+          className="mt-1"
+        />
+      </div>
+      <Button type="submit" disabled={saving} className="gap-2">
+        {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+        Update password
+      </Button>
+    </form>
   );
 }

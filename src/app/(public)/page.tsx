@@ -1,4 +1,5 @@
 import { getWebsiteLayout } from "@/lib/cms/homepage";
+import { enrichHomepageWithDbContent } from "@/lib/cms/enrich-homepage";
 import { getActiveProducts } from "@/lib/products/queries";
 import { mergeCatalogIntoHomepage } from "@/lib/products/catalog";
 import { buildPageMetadata } from "@/lib/seo";
@@ -16,10 +17,11 @@ export default async function HomePage() {
   ]);
 
   const mergedContent = mergeCatalogIntoHomepage(website.homepage, catalog);
+  const content = await enrichHomepageWithDbContent(mergedContent);
 
   return (
     <HomepageProvider
-      content={mergedContent}
+      content={content}
       sectionOrder={website.sectionOrder}
       sectionVisibility={website.sectionVisibility}
     >

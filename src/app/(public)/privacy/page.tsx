@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo";
+import { StaticCmsPage, getStaticPageMeta } from "@/components/public/static-cms-page";
+import { getPublicCmsPage } from "@/lib/cms/public-content";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const page = await getPublicCmsPage("privacy");
+  const fallback = getStaticPageMeta("privacy");
   return buildPageMetadata("/privacy", {
-    title: "Privacy Policy",
-    description: "Shiv Insurance Brokers privacy policy and data protection practices.",
+    title: page?.metaTitle ?? page?.title ?? fallback.title,
+    description: page?.metaDescription ?? fallback.description,
   });
 }
 
 export default function PrivacyPage() {
-  return (
-    <div className="container mx-auto px-4 py-16">
-      <h1 className="mb-6 text-4xl font-bold">Privacy Policy</h1>
-      <p className="text-muted-foreground">Our privacy policy.</p>
-    </div>
-  );
+  return <StaticCmsPage slug="privacy" />;
 }

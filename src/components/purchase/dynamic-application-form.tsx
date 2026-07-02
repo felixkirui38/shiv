@@ -1,16 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { CmsFormDefinition, CmsFormField } from "@/types/purchase";
+import type { ApplicationUploadedFile } from "@/lib/purchase/documents";
 
 interface DynamicApplicationFormProps {
   form: CmsFormDefinition;
   values: Record<string, unknown>;
   onChange: (key: string, value: unknown) => void;
   errors?: Record<string, string>;
+  applicationId?: string;
+  resumeToken?: string;
+  onUploadError?: (message: string) => void;
 }
 
 function groupFields(fields: CmsFormField[]) {
@@ -29,13 +33,60 @@ function parseOptions(options: unknown): { value: string; label: string }[] {
   return options as { value: string; label: string }[];
 }
 
+function isUploadedFile(value: unknown): value is ApplicationUploadedFile {
+  return Boolean(value && typeof value === "object" && "url" in (value as object));
+}
+
 export function DynamicApplicationForm({
   form,
   values,
   onChange,
   errors = {},
+  applicationId,
+  resumeToken,
+  onUploadError,
 }: DynamicApplicationFormProps) {
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
   const sections = useMemo(() => groupFields(form.fields), [form.fields]);
+
+  async function uploadFile(fieldKey: string, file: File) {
+    if (!applicationId) {
+      onUploadError?.("Unable to upload files right now. Please refresh and try again.");
+      return;
+    }
+
+    setUploadingField(fieldKey);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("fieldKey", fieldKey);
+
+      const headers: Record<string, string> = {};
+      if (resumeToken) headers["x-resume-token"] = resumeToken;
+
+      const res = await fetch(`/api/purchase/applications/${applicationId}/documents`, {
+        method: "POST",
+        headers,
+        body,
+      });
+      const data = (await res.json()) as {
+        success?: boolean;
+        error?: string;
+        data?: { file: ApplicationUploadedFile };
+      };
+
+      if (!res.ok || !data.success || !data.data?.file) {
+        onUploadError?.(data.error ?? "Upload failed. Please try again.");
+        return;
+      }
+
+      onChange(fieldKey, data.data.file);
+    } catch {
+      onUploadError?.("Upload failed. Please try again.");
+    } finally {
+      setUploadingField(null);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -49,7 +100,9 @@ export function DynamicApplicationForm({
                 field={field}
                 value={values[field.key]}
                 error={errors[field.key]}
+                uploading={uploadingField === field.key}
                 onChange={(v) => onChange(field.key, v)}
+                onFileSelect={(file) => uploadFile(field.key, file)}
               />
             ))}
           </div>
@@ -63,12 +116,16 @@ function FieldControl({
   field,
   value,
   error,
+  uploading,
   onChange,
+  onFileSelect,
 }: {
   field: CmsFormField;
   value: unknown;
   error?: string;
+  uploading?: boolean;
   onChange: (value: unknown) => void;
+  onFileSelect?: (file: File) => void;
 }) {
   const id = `field-${field.key}`;
   const className = field.type === "TEXTAREA" ? "md:col-span-2" : "";
@@ -138,6 +195,7 @@ function FieldControl({
   }
 
   if (field.type === "FILE") {
+    const uploaded = isUploadedFile(value) ? value : null;
     return (
       <div className={className}>
         <Label htmlFor={id}>
@@ -149,14 +207,24 @@ function FieldControl({
           type="file"
           className="mt-1.5"
           accept=".pdf,.png,.jpg,.jpeg"
+          disabled={uploading}
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) onChange({ fileName: file.name, size: file.size, type: file.type });
+            if (file) onFileSelect?.(file);
           }}
         />
-        {typeof value === "object" && value && "fileName" in (value as object) && (
+        {uploading && <p className="mt-1 text-xs text-muted-foreground">Uploading…</p>}
+        {uploaded && (
           <p className="mt-1 text-xs text-body">
-            Selected: {(value as { fileName: string }).fileName}
+            Uploaded:{" "}
+            <a
+              href={uploaded.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              {uploaded.fileName}
+            </a>
           </p>
         )}
         {error && <p className="text-xs text-destructive">{error}</p>}
@@ -205,6 +273,14 @@ export function validateDynamicForm(
   for (const field of form.fields) {
     if (!field.isRequired) continue;
     const value = values[field.key];
+
+    if (field.type === "FILE") {
+      if (!isUploadedFile(value) || !value.url) {
+        errors[field.key] = `${field.label} is required`;
+      }
+      continue;
+    }
+
     if (value === undefined || value === null || value === "") {
       errors[field.key] = `${field.label} is required`;
     }

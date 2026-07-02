@@ -155,6 +155,64 @@ export async function listPayments(filters: {
   };
 }
 
+export async function getPaymentById(paymentId: string, userId: string) {
+  const payment = await prisma.payment.findFirst({
+    where: { id: paymentId, userId },
+    include: {
+      user: { select: { email: true, firstName: true, lastName: true } },
+      policy: { select: { id: true, policyNumber: true, status: true } },
+      quote: { select: { id: true, quoteNumber: true, status: true } },
+      order: { select: { id: true, orderNumber: true, status: true } },
+      invoice: { select: { id: true, invoiceNumber: true, pdfUrl: true, status: true } },
+      receipt: true,
+      refunds: { orderBy: { createdAt: "desc" } },
+    },
+  });
+
+  if (!payment) return null;
+
+  const base = serializePayment(payment);
+  return {
+    ...base,
+    policy: payment.policy,
+    quote: payment.quote,
+    order: payment.order,
+    invoice: payment.invoice
+      ? {
+          id: payment.invoice.id,
+          invoiceNumber: payment.invoice.invoiceNumber,
+          status: payment.invoice.status,
+          pdfUrl: payment.invoice.pdfUrl,
+        }
+      : null,
+    refunds: payment.refunds.map((r) => ({
+      id: r.id,
+      amount: Number(r.amount),
+      reason: r.reason,
+      createdAt: r.createdAt.toISOString(),
+    })),
+  };
+}
+
+export async function listSubscriptions(userId: string) {
+  const items = await prisma.subscription.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return items.map((s) => ({
+    id: s.id,
+    status: s.status,
+    provider: s.provider,
+    planType: s.planType,
+    currentPeriodStart: s.currentPeriodStart?.toISOString() ?? null,
+    currentPeriodEnd: s.currentPeriodEnd?.toISOString() ?? null,
+    cancelAtPeriodEnd: s.cancelAtPeriodEnd,
+    cancelledAt: s.cancelledAt?.toISOString() ?? null,
+    createdAt: s.createdAt.toISOString(),
+  }));
+}
+
 export async function listInvoices(userId: string) {
   const invoices = await prisma.invoice.findMany({
     where: { userId },

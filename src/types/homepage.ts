@@ -12,6 +12,7 @@ export interface HomepageHero {
   primaryButtonHref: string;
   secondaryButtonLabel: string;
   secondaryButtonHref: string;
+  backgroundImageUrl?: string;
   images: HomepageHeroImage[];
 }
 
@@ -65,6 +66,7 @@ export interface HomepageReason {
 export interface HomepagePartner {
   name: string;
   logoUrl?: string;
+  website?: string;
 }
 
 export interface HomepageTestimonial {

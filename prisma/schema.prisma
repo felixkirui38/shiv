@@ -40,7 +40,6 @@ enum ProductType {
   HOME
   BUSINESS
   MARINE
-  PET
 }
 
 enum PolicyStatus {

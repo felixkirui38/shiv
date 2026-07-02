@@ -17,7 +17,8 @@ export function getPaymentProvider(provider: PaymentProvider): PaymentProviderAd
 }
 
 export function getAvailableProviders(): PaymentProvider[] {
-  const available: PaymentProvider[] = ["STRIPE"];
+  const available: PaymentProvider[] = [];
+  if (process.env.STRIPE_SECRET_KEY) available.push("STRIPE");
   if (process.env.PESAPAL_CONSUMER_KEY) available.push("PESAPAL");
   if (process.env.FLUTTERWAVE_SECRET_KEY) available.push("FLUTTERWAVE");
   if (process.env.MPESA_CONSUMER_KEY) available.push("MPESA");

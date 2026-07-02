@@ -9,7 +9,7 @@ import {
 const faqs = [
   {
     q: "What types of insurance does Shiv Insurance Brokers offer?",
-    a: "We offer motor, medical, travel, life, home, business, marine, and pet insurance through leading underwriters in Kenya.",
+    a: "We offer motor, medical, travel, life, home, business, and marine insurance through leading underwriters in Kenya.",
   },
   {
     q: "How do I file an insurance claim?",

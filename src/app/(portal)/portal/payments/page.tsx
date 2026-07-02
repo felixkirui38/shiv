@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
 import { PortalPageHeader } from "@/components/portal/portal-page-header";
 import { PortalCard, PortalEmptyState, PortalLoader } from "@/components/portal/portal-card";
@@ -35,6 +37,7 @@ const PROVIDER_LABELS: Record<string, string> = {
 };
 
 export default function PaymentsPage() {
+  const router = useRouter();
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
@@ -99,7 +102,11 @@ export default function PaymentsPage() {
             </thead>
             <tbody>
               {payments.map((p) => (
-                <tr key={p.id} className="border-b last:border-0">
+                <tr
+                  key={p.id}
+                  className="cursor-pointer border-b last:border-0 hover:bg-slate-50"
+                  onClick={() => router.push(`/portal/payments/${p.id}`)}
+                >
                   <td className="px-4 py-3 text-muted-foreground">
                     {new Date(p.paidAt ?? p.createdAt).toLocaleDateString()}
                   </td>
@@ -133,6 +140,7 @@ export default function PaymentsPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <Download className="size-3.5" />
                         {p.receiptNumber ?? "PDF"}
